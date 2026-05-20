@@ -1,0 +1,12 @@
+# Local operator configuration
+config/host.env
+config/rhsm.env
+
+# Local run output
+logs/
+work/
+tmp/
+
+# Editor noise
+*~
+*.swp

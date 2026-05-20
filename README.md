@@ -2,6 +2,28 @@
 
 Customer-demo setup assets for the Calabi on-prem OpenShift appliance lab.
 
+## Folder Tree
+
+```text
+appliance-install/
+  config/
+    host.env.example
+    rhsm.env.example
+  docs/
+    folder-tree.md
+  scripts/
+    01-register-rhn.sh
+    02-install-host-packages.sh
+    03-enable-host-services.sh
+    04-verify-virt-host.sh
+    lib/
+      remote.sh
+```
+
+The tracked `config/*.example` files document required values with sanitized
+placeholders. Local files such as `config/host.env` and `config/rhsm.env` are
+ignored by git.
+
 ## Script Style
 
 Setup work in this repository should be codified as numbered shell scripts:
