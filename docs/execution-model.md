@@ -20,6 +20,21 @@ operator workstation
             virtualization host
 ```
 
+## Run Locations
+
+| Thing | Where it runs | Notes |
+| --- | --- | --- |
+| Repository clone | Operator workstation | This is where the operator runs `./scripts/*.sh`. |
+| `config/*.env` | Operator workstation | Local files, ignored by git. |
+| Numbered scripts | Operator workstation | Each script connects to the configured host over SSH. |
+| `scripts/lib/remote.sh` | Sourced by numbered scripts | Helper functions only; do not run directly. |
+| RHSM registration commands | Virtualization host | Sent over SSH by `01-register-rhn.sh`. |
+| Package installation commands | Virtualization host | Sent over SSH by `02-install-host-packages.sh`. |
+| Service enablement commands | Virtualization host | Sent over SSH by `03-enable-host-services.sh`. |
+| OVS/libvirt network commands | Virtualization host | Sent over SSH by `04-configure-ovs-networks.sh`. |
+| `/usr/local/sbin/appliance-install-net.sh` | Virtualization host | Generated persistent OVS setup script. |
+| `appliance-install-net.service` | Virtualization host | Generated systemd service that reruns OVS setup at boot. |
+
 ## Local Config Files
 
 Create local config from the tracked examples:

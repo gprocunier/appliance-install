@@ -3,6 +3,9 @@ set -euo pipefail
 
 #### These steps enable the services needed for Cockpit and virtual machines
 
+# Run this script from the operator workstation, in the repository root.
+# This script enables services on the virtualization host over SSH.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC1091

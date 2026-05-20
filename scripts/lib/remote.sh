@@ -2,6 +2,8 @@
 
 #### Shared helpers for running simple commands on the virtualization host
 
+# Source this file from numbered scripts. Do not run it directly.
+
 repo_root() {
     local script_dir
 

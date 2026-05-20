@@ -3,6 +3,9 @@ set -euo pipefail
 
 #### These steps register the virtualization host with Red Hat
 
+# Run this script from the operator workstation, in the repository root.
+# This script sends RHSM registration commands to the virtualization host over SSH.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC1091

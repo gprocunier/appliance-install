@@ -3,6 +3,9 @@ set -euo pipefail
 
 #### These steps install the virtualization host package set
 
+# Run this script from the operator workstation, in the repository root.
+# This script installs packages on the virtualization host over SSH.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC1091

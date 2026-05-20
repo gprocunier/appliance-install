@@ -3,6 +3,9 @@ set -euo pipefail
 
 #### These steps configure OVS-only networks for the appliance lab
 
+# Run this script from the operator workstation, in the repository root.
+# This script creates OVS and libvirt network state on the virtualization host.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck disable=SC1091
