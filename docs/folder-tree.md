@@ -8,15 +8,18 @@ appliance-install/
   README.md
   config/
     host.env.example
+    network.env.example
     rhsm.env.example
   docs/
     execution-model.md
     folder-tree.md
+    network-design.md
   scripts/
     01-register-rhn.sh
     02-install-host-packages.sh
     03-enable-host-services.sh
-    04-verify-virt-host.sh
+    04-configure-ovs-networks.sh
+    05-verify-virt-host.sh
     README.md
     lib/
       remote.sh
@@ -31,6 +34,9 @@ repository defaults. Copy it to `config/host.env` before running host setup.
 sanitized placeholders. The real `config/rhsm.env` file is ignored by git and
 must not be committed.
 
+`config/network.env.example` documents the OVS-only appliance networks. The
+real `config/network.env` file is ignored by git.
+
 ## Scripts
 
 Scripts are numbered in the order an operator should run them. Keep each script
@@ -44,3 +50,4 @@ and customer-demo assumptions.
 - `execution-model.md` explains where scripts run and how they reach the
   virtualization host.
 - `folder-tree.md` explains the repository layout.
+- `network-design.md` explains the OVS-only disconnected appliance network.

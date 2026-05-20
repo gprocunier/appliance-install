@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/remote.sh"
 
 load_host_config
+load_network_config
 
 #### These commands intentionally stay simple and readable
 
@@ -33,6 +34,15 @@ run_remote systemctl is-active cockpit.socket
 run_remote systemctl is-active virtqemud.service
 run_remote systemctl is-active virtnetworkd.service
 
+# Confirm Open vSwitch and the appliance network service are active.
+run_remote systemctl is-active openvswitch.service
+run_remote systemctl is-active appliance-install-net.service
+
 # Confirm libvirt command-line access works.
 run_remote virsh list --all
 run_remote virsh net-list --all
+
+# Confirm the configured OVS bridge exists without a physical uplink.
+run_remote ovs-vsctl show
+run_remote ip -br addr show "${APPLIANCE_OVS_BRIDGE}"
+run_remote ip -br addr show "${APPLIANCE_MACHINE_PORT}"

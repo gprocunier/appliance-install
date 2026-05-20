@@ -10,6 +10,7 @@ local configuration and use SSH to make the requested change on the target host.
 ```text
 operator workstation
   config/host.env
+  config/network.env
   config/rhsm.env
   scripts/01-register-rhn.sh
         |
@@ -26,6 +27,7 @@ Create local config from the tracked examples:
 ```bash
 cp config/host.env.example config/host.env
 cp config/rhsm.env.example config/rhsm.env
+cp config/network.env.example config/network.env
 ```
 
 `config/host.env` describes how the operator workstation reaches the
@@ -46,6 +48,9 @@ RHSM_ACTIVATION_KEY="replace-with-red-hat-activation-key"
 
 Both files are ignored by git through `config/*.env`.
 
+`config/network.env` describes the OVS-only appliance networks. The initial
+design keeps the OpenShift VMs on an OVS bridge without a physical uplink.
+
 ## Host Prep Order
 
 Run these from the repository root:
@@ -54,7 +59,8 @@ Run these from the repository root:
 ./scripts/01-register-rhn.sh
 ./scripts/02-install-host-packages.sh
 ./scripts/03-enable-host-services.sh
-./scripts/04-verify-virt-host.sh
+./scripts/04-configure-ovs-networks.sh
+./scripts/05-verify-virt-host.sh
 ```
 
 ## What remote.sh Does
@@ -66,6 +72,7 @@ It provides small helper functions:
 
 - `load_host_config`: loads `config/host.env`
 - `load_rhsm_config`: loads `config/rhsm.env`
+- `load_network_config`: loads `config/network.env`
 - `run_remote`: runs one command over SSH
 - `run_remote_bash`: runs a readable multi-line bash block over SSH
 

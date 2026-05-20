@@ -10,6 +10,16 @@ the target virtualization host over SSH.
 `scripts/lib/remote.sh` is shared helper code, not a script to run directly.
 See `docs/execution-model.md` for the full execution model.
 
+Current host-prep order:
+
+```bash
+./scripts/01-register-rhn.sh
+./scripts/02-install-host-packages.sh
+./scripts/03-enable-host-services.sh
+./scripts/04-configure-ovs-networks.sh
+./scripts/05-verify-virt-host.sh
+```
+
 Style rules:
 
 - Use names like `01-prepare-host.sh`, `02-create-foundry.sh`, and

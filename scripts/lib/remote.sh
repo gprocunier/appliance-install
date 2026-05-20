@@ -40,6 +40,21 @@ load_rhsm_config() {
     source "${root_dir}/config/rhsm.env"
 }
 
+load_network_config() {
+    local root_dir
+
+    root_dir="$(repo_root)"
+
+    if [[ ! -f "${root_dir}/config/network.env" ]]; then
+        echo "Missing config/network.env"
+        echo "Copy config/network.env.example to config/network.env and fill in operator-provided values."
+        exit 1
+    fi
+
+    # shellcheck disable=SC1091
+    source "${root_dir}/config/network.env"
+}
+
 remote_target() {
     printf '%s@%s\n' "${APPLIANCE_HOST_USER}" "${APPLIANCE_HOST}"
 }
