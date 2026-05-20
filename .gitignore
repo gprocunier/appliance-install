@@ -1,6 +1,5 @@
 # Local operator configuration
-config/host.env
-config/rhsm.env
+config/*.env
 
 # Local run output
 logs/
