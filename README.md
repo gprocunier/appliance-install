@@ -2,6 +2,45 @@
 
 Customer-demo setup assets for the Calabi on-prem OpenShift appliance lab.
 
+## Execution Model
+
+Run this repository from the operator workstation. The numbered scripts connect
+to the virtualization host over SSH and make changes there.
+
+```text
+operator workstation
+  -> scripts/01-register-rhn.sh
+  -> scripts/02-install-host-packages.sh
+  -> scripts/03-enable-host-services.sh
+  -> scripts/04-verify-virt-host.sh
+       |
+       +-- SSH to the configured virtualization host
+```
+
+Before running host setup, create local config files from the examples:
+
+```bash
+cp config/host.env.example config/host.env
+cp config/rhsm.env.example config/rhsm.env
+```
+
+Edit those local files for the target environment. They are ignored by git.
+
+Current host-prep order:
+
+```bash
+./scripts/01-register-rhn.sh
+./scripts/02-install-host-packages.sh
+./scripts/03-enable-host-services.sh
+./scripts/04-verify-virt-host.sh
+```
+
+`scripts/lib/remote.sh` is not an operator step. It is a shared helper used by
+the numbered scripts to load `config/*.env` and run simple SSH commands on the
+target host.
+
+See [Execution Model](docs/execution-model.md) for more detail.
+
 ## Folder Tree
 
 ```text

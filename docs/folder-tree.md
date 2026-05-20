@@ -10,6 +10,7 @@ appliance-install/
     host.env.example
     rhsm.env.example
   docs/
+    execution-model.md
     folder-tree.md
   scripts/
     01-register-rhn.sh
@@ -39,3 +40,7 @@ focused on one phase, with readable comments and clear commands.
 
 Use this directory for small notes that explain operator decisions, topology,
 and customer-demo assumptions.
+
+- `execution-model.md` explains where scripts run and how they reach the
+  virtualization host.
+- `folder-tree.md` explains the repository layout.
