@@ -57,6 +57,29 @@ load_network_config() {
     source "${root_dir}/config/network.env"
 }
 
+load_foundry_config() {
+    local root_dir
+
+    root_dir="$(repo_root)"
+
+    if [[ ! -f "${root_dir}/config/foundry.env" ]]; then
+        echo "Missing config/foundry.env"
+        echo "Copy config/foundry.env.example to config/foundry.env and adjust it."
+        exit 1
+    fi
+
+    # shellcheck disable=SC1091
+    source "${root_dir}/config/foundry.env"
+
+    APPLIANCE_FOUNDRY_NAME="${APPLIANCE_FOUNDRY_NAME:-foundry}"
+    APPLIANCE_FOUNDRY_USER="${APPLIANCE_FOUNDRY_USER:-appliance}"
+    APPLIANCE_FOUNDRY_APPLIANCE_IP="${APPLIANCE_FOUNDRY_APPLIANCE_IP:-172.16.10.10}"
+
+    if [[ -z "${APPLIANCE_FOUNDRY_SSH_KEY:-}" ]]; then
+        APPLIANCE_FOUNDRY_SSH_KEY="${APPLIANCE_HOST_SSH_KEY:-}"
+    fi
+}
+
 remote_target() {
     printf '%s@%s\n' "${APPLIANCE_HOST_USER}" "${APPLIANCE_HOST}"
 }
@@ -93,4 +116,61 @@ run_remote_bash() {
             "$(remote_target)" \
             /bin/bash -s
     fi
+}
+
+write_foundry_ssh_config() {
+    local ssh_config
+
+    ssh_config="$1"
+
+    {
+        echo "Host appliance-virt-host"
+        echo "  HostName ${APPLIANCE_HOST}"
+        echo "  User ${APPLIANCE_HOST_USER}"
+        if [[ -n "${APPLIANCE_HOST_SSH_KEY:-}" ]]; then
+            echo "  IdentityFile ${APPLIANCE_HOST_SSH_KEY}"
+        fi
+        echo "  StrictHostKeyChecking no"
+        echo "  UserKnownHostsFile /dev/null"
+        echo
+        echo "Host appliance-foundry"
+        echo "  HostName ${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
+        echo "  User ${APPLIANCE_FOUNDRY_USER}"
+        if [[ -n "${APPLIANCE_FOUNDRY_SSH_KEY:-}" ]]; then
+            echo "  IdentityFile ${APPLIANCE_FOUNDRY_SSH_KEY}"
+        fi
+        echo "  ProxyJump appliance-virt-host"
+        echo "  StrictHostKeyChecking no"
+        echo "  UserKnownHostsFile /dev/null"
+    } > "${ssh_config}"
+
+    chmod 0600 "${ssh_config}"
+}
+
+run_foundry() {
+    local ssh_config
+    local status
+
+    ssh_config="$(mktemp)"
+    write_foundry_ssh_config "${ssh_config}"
+
+    ssh -F "${ssh_config}" appliance-foundry "$@" || status="$?"
+    status="${status:-0}"
+
+    rm -f "${ssh_config}"
+    return "${status}"
+}
+
+run_foundry_bash() {
+    local ssh_config
+    local status
+
+    ssh_config="$(mktemp)"
+    write_foundry_ssh_config "${ssh_config}"
+
+    ssh -F "${ssh_config}" appliance-foundry /bin/bash -s || status="$?"
+    status="${status:-0}"
+
+    rm -f "${ssh_config}"
+    return "${status}"
 }

@@ -18,6 +18,9 @@ Current host-prep order:
 ./scripts/03-enable-host-services.sh
 ./scripts/04-configure-ovs-networks.sh
 ./scripts/05-verify-virt-host.sh
+./scripts/06-create-foundry-vm.sh
+./scripts/07-configure-foundry-services.sh
+./scripts/08-verify-foundry-services.sh
 ```
 
 Style rules:

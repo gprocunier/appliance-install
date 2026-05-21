@@ -33,6 +33,8 @@ content to the appliance network.
 
 The OpenShift nodes are single-homed on the appliance network.
 
+See [Foundry VM](foundry.md) for the foundry build and service scripts.
+
 ## Initial Networks
 
 The first setup phase creates one OVS bridge and a libvirt network backed by
