@@ -27,7 +27,7 @@ systemctl enable --now cockpit.socket
 
 #### These steps enable virtualization services
 
-# Open vSwitch is required for the Calabi lab bridge model.
+# Open vSwitch is required for the appliance lab bridge model.
 systemctl enable --now openvswitch.service
 
 # RHEL 10 uses modular libvirt daemons for QEMU and virtual networking.

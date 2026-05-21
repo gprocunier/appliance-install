@@ -1,6 +1,6 @@
 # Appliance Install
 
-Customer-demo setup assets for the Calabi on-prem OpenShift appliance lab.
+Customer-demo setup assets for an on-prem OpenShift appliance lab.
 
 Tracked content is intended to be publishable. Keep kubeadmin passwords, pull
 secrets, RHSM credentials, private hostnames, and private workstation paths in

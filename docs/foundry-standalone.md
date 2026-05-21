@@ -6,7 +6,7 @@ where the host already has normal flat networking and internet access through
 its default gateway.
 
 This path intentionally skips services that are only needed for the virtualized
-Calabi lab topology:
+virtualized appliance lab topology:
 
 - no foundry VM creation
 - no Open vSwitch or libvirt networking

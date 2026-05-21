@@ -56,7 +56,7 @@ subscription-manager config --rhsm.manage_repos=1
 subscription-manager repos --enable "\${RHSM_BASEOS_REPO}"
 subscription-manager repos --enable "\${RHSM_APPSTREAM_REPO}"
 
-# Fast Datapath provides the Open vSwitch package used by the Calabi lab.
+# Fast Datapath provides the Open vSwitch package used by the appliance lab.
 subscription-manager repos --enable "\${RHSM_FAST_DATAPATH_REPO}"
 
 # CodeReady is useful for optional dependencies and troubleshooting tools.
