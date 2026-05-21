@@ -8,7 +8,8 @@ It is dual-homed:
 - one NIC on the upstream libvirt network for downloads and mirroring
 - one NIC on `lab-switch` for DNS, NTP, and staged content
 
-The OpenShift VMs should use foundry for DNS and NTP on the appliance network.
+The OpenShift VMs should use foundry for IdM-backed DNS and NTP on the
+appliance network.
 
 ## Local Config
 
@@ -20,9 +21,12 @@ cp config/foundry.env.example config/foundry.env
 
 Edit `config/foundry.env` for the target lab. The real file is ignored by git.
 
-The important operator-provided value is
-`APPLIANCE_FOUNDRY_BASE_IMAGE`. It must point to a RHEL cloud image that already
-exists on the virtualization host.
+The important operator-provided values are:
+
+- `APPLIANCE_FOUNDRY_BASE_IMAGE`, which must point to a RHEL cloud image that
+  already exists on the virtualization host
+- `APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD`
+- `APPLIANCE_IDM_ADMIN_PASSWORD`
 
 ## Run Order
 
@@ -39,7 +43,7 @@ Run these from the repository root on the operator workstation:
 `07-configure-foundry-services.sh` reaches foundry through the virtualization
 host and configures:
 
-- DNS records for `appliance.workshop.lan`
+- IdM with integrated DNS for `appliance.workshop.lan`
 - NTP service for `172.16.10.0/24`
 - web staging directories under `/srv/appliance`
 - podman and image-copy tooling for later appliance-builder work

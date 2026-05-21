@@ -44,12 +44,13 @@ run_foundry hostnamectl
 run_foundry ip -br addr
 
 # Confirm expected services are active.
-run_foundry systemctl is-active dnsmasq.service
+run_foundry systemctl is-active ipa.service
 run_foundry systemctl is-active chronyd.service
 run_foundry systemctl is-active httpd.service
 run_foundry systemctl is-active firewalld.service
+run_foundry sudo -n ipactl status
 
-# Confirm local DNS records for the appliance network.
+# Confirm IdM DNS records for the appliance network.
 run_foundry dig "@${APPLIANCE_FOUNDRY_APPLIANCE_IP}" "${APPLIANCE_FOUNDRY_HOSTNAME}" +short
 run_foundry dig "@${APPLIANCE_FOUNDRY_APPLIANCE_IP}" "${APPLIANCE_MIRROR_REGISTRY_NAME}.${APPLIANCE_CLUSTER_DOMAIN}" +short
 run_foundry dig "@${APPLIANCE_FOUNDRY_APPLIANCE_IP}" "api.${APPLIANCE_CLUSTER_DOMAIN}" +short

@@ -37,7 +37,7 @@ operator workstation
 | Foundry service commands | Foundry VM | Sent through the virtualization host jump path by `07-configure-foundry-services.sh`. |
 | `/usr/local/sbin/appliance-install-net.sh` | Virtualization host | Generated persistent OVS setup script. |
 | `appliance-install-net.service` | Virtualization host | Generated systemd service that reruns OVS setup at boot. |
-| `dnsmasq`, `chronyd`, `httpd` | Foundry VM | Configured by script `07` for the appliance network. |
+| IdM DNS, `chronyd`, `httpd` | Foundry VM | Configured by script `07` for the appliance network. |
 
 ## Local Config Files
 

@@ -17,6 +17,9 @@ load_foundry_config
 load_rhsm_config
 
 APPLIANCE_CLUSTER_DOMAIN="${APPLIANCE_CLUSTER_DOMAIN:-appliance.workshop.lan}"
+APPLIANCE_IDM_REALM="${APPLIANCE_IDM_REALM:-${APPLIANCE_CLUSTER_DOMAIN^^}}"
+APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD="${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD:-}"
+APPLIANCE_IDM_ADMIN_PASSWORD="${APPLIANCE_IDM_ADMIN_PASSWORD:-}"
 APPLIANCE_MIRROR_REGISTRY_NAME="${APPLIANCE_MIRROR_REGISTRY_NAME:-mirror-registry}"
 APPLIANCE_API_IP="${APPLIANCE_API_IP:-172.16.10.5}"
 APPLIANCE_INGRESS_IP="${APPLIANCE_INGRESS_IP:-172.16.10.7}"
@@ -38,6 +41,9 @@ APPLIANCE_BUILDER_IMAGE="${APPLIANCE_BUILDER_IMAGE:-catalog.redhat.com/software/
 validate_non_empty "RHSM_ORG_ID" "${RHSM_ORG_ID}"
 validate_non_empty "RHSM_ACTIVATION_KEY" "${RHSM_ACTIVATION_KEY}"
 validate_fqdn "APPLIANCE_CLUSTER_DOMAIN" "${APPLIANCE_CLUSTER_DOMAIN}"
+validate_fqdn "APPLIANCE_IDM_REALM" "${APPLIANCE_IDM_REALM}"
+validate_non_empty "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD" "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
+validate_non_empty "APPLIANCE_IDM_ADMIN_PASSWORD" "${APPLIANCE_IDM_ADMIN_PASSWORD}"
 validate_dns_label "APPLIANCE_MIRROR_REGISTRY_NAME" "${APPLIANCE_MIRROR_REGISTRY_NAME}"
 validate_fqdn "APPLIANCE_FOUNDRY_HOSTNAME" "${APPLIANCE_FOUNDRY_HOSTNAME}"
 validate_ipv4 "APPLIANCE_FOUNDRY_APPLIANCE_IP" "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
@@ -58,6 +64,18 @@ if [[ "${APPLIANCE_BUILDER_IMAGE}" =~ [[:space:]] ]]; then
     fail "APPLIANCE_BUILDER_IMAGE must not contain whitespace."
 fi
 
+if [[ "${APPLIANCE_IDM_REALM}" != "${APPLIANCE_IDM_REALM^^}" ]]; then
+    fail "APPLIANCE_IDM_REALM should be uppercase, for example APPLIANCE.WORKSHOP.LAN."
+fi
+
+if [[ "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}" == replace-with-* ]]; then
+    fail "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD must be changed in config/foundry.env."
+fi
+
+if [[ "${APPLIANCE_IDM_ADMIN_PASSWORD}" == replace-with-* ]]; then
+    fail "APPLIANCE_IDM_ADMIN_PASSWORD must be changed in config/foundry.env."
+fi
+
 if [[ -n "${RHSM_BASEOS_REPO:-}" ]]; then
     validate_simple_name "RHSM_BASEOS_REPO" "${RHSM_BASEOS_REPO}"
 fi
@@ -75,6 +93,9 @@ printf -v RHSM_ACTIVATION_KEY_REMOTE '%q' "${RHSM_ACTIVATION_KEY}"
 printf -v RHSM_BASEOS_REPO_REMOTE '%q' "${RHSM_BASEOS_REPO:-}"
 printf -v RHSM_APPSTREAM_REPO_REMOTE '%q' "${RHSM_APPSTREAM_REPO:-}"
 printf -v RHSM_CODEREADY_REPO_REMOTE '%q' "${RHSM_CODEREADY_REPO:-}"
+printf -v IDM_REALM_REMOTE '%q' "${APPLIANCE_IDM_REALM}"
+printf -v IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
+printf -v IDM_ADMIN_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_ADMIN_PASSWORD}"
 printf -v FOUNDRY_HOSTNAME_REMOTE '%q' "${APPLIANCE_FOUNDRY_HOSTNAME}"
 printf -v FOUNDRY_IP_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
 printf -v FOUNDRY_CIDR_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_CIDR}"
@@ -100,6 +121,9 @@ RHSM_ACTIVATION_KEY=${RHSM_ACTIVATION_KEY_REMOTE}
 RHSM_BASEOS_REPO=${RHSM_BASEOS_REPO_REMOTE}
 RHSM_APPSTREAM_REPO=${RHSM_APPSTREAM_REPO_REMOTE}
 RHSM_CODEREADY_REPO=${RHSM_CODEREADY_REPO_REMOTE}
+IDM_REALM=${IDM_REALM_REMOTE}
+IDM_DIRECTORY_MANAGER_PASSWORD=${IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE}
+IDM_ADMIN_PASSWORD=${IDM_ADMIN_PASSWORD_REMOTE}
 FOUNDRY_HOSTNAME=${FOUNDRY_HOSTNAME_REMOTE}
 FOUNDRY_IP=${FOUNDRY_IP_REMOTE}
 FOUNDRY_CIDR=${FOUNDRY_CIDR_REMOTE}
@@ -116,18 +140,6 @@ NODE_3_IP=${NODE_3_IP_REMOTE}
 ASSETS_DIR=${ASSETS_DIR_REMOTE}
 HTTP_ROOT=${HTTP_ROOT_REMOTE}
 BUILDER_IMAGE=${BUILDER_IMAGE_REMOTE}
-
-reverse_ipv4_name() {
-    local ip
-    local a
-    local b
-    local c
-    local d
-
-    ip="\$1"
-    IFS=. read -r a b c d <<< "\${ip}"
-    printf '%s.%s.%s.%s.in-addr.arpa' "\${d}" "\${c}" "\${b}" "\${a}"
-}
 
 #### These steps register foundry and install service packages
 
@@ -158,9 +170,10 @@ dnf install -y \
     bind-utils \
     chrony \
     curl \
-    dnsmasq \
     firewalld \
     httpd \
+    ipa-server \
+    ipa-server-dns \
     jq \
     podman \
     skopeo \
@@ -194,40 +207,66 @@ README_TEXT
 # Allow httpd to serve staged content under /srv on SELinux systems.
 chcon -R -t httpd_sys_content_t "\${HTTP_ROOT}" >/dev/null 2>&1 || true
 
-#### These steps configure private DNS for the appliance network
+#### These steps configure IdM as private DNS for the appliance network
 
-# dnsmasq serves only lab records; foundry keeps upstream DNS from its upstream NIC.
-mkdir -p /etc/dnsmasq.d
-cat > /etc/dnsmasq.d/appliance-install.conf <<DNSMASQ_CONF
-domain-needed
-bogus-priv
-local=/\${CLUSTER_DOMAIN}/
-domain=\${CLUSTER_DOMAIN}
-expand-hosts
-bind-interfaces
-listen-address=127.0.0.1,\${FOUNDRY_IP}
+# IdM installation expects the foundry hostname to resolve to the foundry IP.
+hostnamectl set-hostname "\${FOUNDRY_HOSTNAME}"
+hosts_tmp="\$(mktemp)"
+awk -v host="\${FOUNDRY_HOSTNAME}" 'index(\$0, host) == 0 { print }' /etc/hosts > "\${hosts_tmp}"
+cat "\${hosts_tmp}" > /etc/hosts
+rm -f "\${hosts_tmp}"
+printf '%s %s %s\n' "\${FOUNDRY_IP}" "\${FOUNDRY_HOSTNAME}" "\${FOUNDRY_HOSTNAME%%.*}" >> /etc/hosts
 
-host-record=\${FOUNDRY_HOSTNAME},\${FOUNDRY_IP}
-host-record=\${MIRROR_REGISTRY_NAME}.\${CLUSTER_DOMAIN},\${FOUNDRY_IP}
-host-record=api.\${CLUSTER_DOMAIN},\${API_IP}
-host-record=api-int.\${CLUSTER_DOMAIN},\${API_IP}
-address=/.apps.\${CLUSTER_DOMAIN}/\${INGRESS_IP}
-host-record=\${NODE_1_NAME}.\${CLUSTER_DOMAIN},\${NODE_1_IP}
-host-record=\${NODE_2_NAME}.\${CLUSTER_DOMAIN},\${NODE_2_IP}
-host-record=\${NODE_3_NAME}.\${CLUSTER_DOMAIN},\${NODE_3_IP}
-ptr-record=\$(reverse_ipv4_name "\${FOUNDRY_IP}"),\${FOUNDRY_HOSTNAME}
-ptr-record=\$(reverse_ipv4_name "\${API_IP}"),api.\${CLUSTER_DOMAIN}
-ptr-record=\$(reverse_ipv4_name "\${INGRESS_IP}"),apps.\${CLUSTER_DOMAIN}
-ptr-record=\$(reverse_ipv4_name "\${NODE_1_IP}"),\${NODE_1_NAME}.\${CLUSTER_DOMAIN}
-ptr-record=\$(reverse_ipv4_name "\${NODE_2_IP}"),\${NODE_2_NAME}.\${CLUSTER_DOMAIN}
-ptr-record=\$(reverse_ipv4_name "\${NODE_3_IP}"),\${NODE_3_NAME}.\${CLUSTER_DOMAIN}
-DNSMASQ_CONF
+# Install IdM with integrated DNS once; later runs manage records through ipa.
+if [[ -f /etc/ipa/default.conf ]]; then
+    echo "IdM is already installed on foundry."
+else
+    ipa-server-install \
+        --unattended \
+        --setup-dns \
+        --no-forwarders \
+        --no-dnssec-validation \
+        --auto-reverse \
+        --domain "\${CLUSTER_DOMAIN}" \
+        --realm "\${IDM_REALM}" \
+        --hostname "\${FOUNDRY_HOSTNAME}" \
+        --ip-address "\${FOUNDRY_IP}" \
+        --ds-password "\${IDM_DIRECTORY_MANAGER_PASSWORD}" \
+        --admin-password "\${IDM_ADMIN_PASSWORD}"
+fi
 
-# Check the generated DNS configuration before restarting the service.
-dnsmasq --test --conf-file=/etc/dnsmasq.d/appliance-install.conf
+# Authenticate to IdM so DNS records can be managed with ipa commands.
+printf '%s\n' "\${IDM_ADMIN_PASSWORD}" | kinit admin
 
-systemctl enable dnsmasq.service
-systemctl restart dnsmasq.service
+ensure_a_record() {
+    local record_name
+    local record_ip
+
+    record_name="\$1"
+    record_ip="\$2"
+
+    if ipa dnsrecord-show "\${CLUSTER_DOMAIN}" "\${record_name}" >/dev/null 2>&1; then
+        ipa dnsrecord-mod "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}"
+    else
+        ipa dnsrecord-add "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}" --a-create-reverse || \
+            ipa dnsrecord-add "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}"
+    fi
+}
+
+# Create the records needed by the appliance install and demo.
+ensure_a_record "\${FOUNDRY_HOSTNAME%%.*}" "\${FOUNDRY_IP}"
+ensure_a_record "\${MIRROR_REGISTRY_NAME}" "\${FOUNDRY_IP}"
+ensure_a_record "api" "\${API_IP}"
+ensure_a_record "api-int" "\${API_IP}"
+ensure_a_record "*.apps" "\${INGRESS_IP}"
+ensure_a_record "\${NODE_1_NAME}" "\${NODE_1_IP}"
+ensure_a_record "\${NODE_2_NAME}" "\${NODE_2_IP}"
+ensure_a_record "\${NODE_3_NAME}" "\${NODE_3_IP}"
+
+# Confirm IdM and the integrated DNS service are healthy before moving on.
+ipactl status
+dig "@\${FOUNDRY_IP}" "\${FOUNDRY_HOSTNAME}" +short
+dig "@\${FOUNDRY_IP}" "api.\${CLUSTER_DOMAIN}" +short
 
 #### These steps configure NTP for the appliance network
 
@@ -281,6 +320,10 @@ firewall-cmd --permanent --add-service=dns
 firewall-cmd --permanent --add-service=ntp
 firewall-cmd --permanent --add-service=http
 firewall-cmd --permanent --add-service=https
+firewall-cmd --permanent --add-service=kerberos
+firewall-cmd --permanent --add-service=kpasswd
+firewall-cmd --permanent --add-service=ldap
+firewall-cmd --permanent --add-service=ldaps
 firewall-cmd --permanent --add-port=5000/tcp
 firewall-cmd --reload
 
