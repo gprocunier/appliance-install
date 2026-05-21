@@ -19,7 +19,7 @@ management/upstream network
   |
   +-- foundry first NIC
 
-OVS appliance-switch
+OVS lab-switch
   |
   +-- foundry appliance NIC
   +-- ocp-01 appliance NIC
@@ -39,8 +39,8 @@ The first setup phase creates one OVS bridge and a libvirt network backed by
 that bridge:
 
 ```text
-OVS bridge:       appliance-switch
-libvirt network:  appliance-switch
+OVS bridge:       lab-switch
+libvirt network:  lab-switch
 machine VLAN:     200
 machine CIDR:     172.16.10.0/24
 host gateway IP:  172.16.10.1/24
@@ -73,7 +73,7 @@ Create matching PTR records for the fixed addresses.
 ## Hard Disconnection Demo
 
 To demonstrate disconnection, keep the OpenShift nodes attached only to
-`appliance-switch`. Do not attach a physical uplink to the OVS bridge, and do
+`lab-switch`. Do not attach a physical uplink to the OVS bridge, and do
 not add host NAT for the appliance network.
 
 The default `config/network.env.example` sets:

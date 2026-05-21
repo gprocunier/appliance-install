@@ -14,24 +14,51 @@ source "${SCRIPT_DIR}/lib/remote.sh"
 load_host_config
 load_network_config
 
-APPLIANCE_OVS_BRIDGE="${APPLIANCE_OVS_BRIDGE:-appliance-switch}"
-APPLIANCE_LIBVIRT_NETWORK="${APPLIANCE_LIBVIRT_NETWORK:-appliance-switch}"
+APPLIANCE_OVS_BRIDGE="${APPLIANCE_OVS_BRIDGE:-lab-switch}"
+APPLIANCE_LIBVIRT_NETWORK="${APPLIANCE_LIBVIRT_NETWORK:-lab-switch}"
 APPLIANCE_DISABLE_HOST_IPV4_FORWARDING="${APPLIANCE_DISABLE_HOST_IPV4_FORWARDING:-true}"
 
-APPLIANCE_MACHINE_PORT="${APPLIANCE_MACHINE_PORT:-appliance-machine}"
+APPLIANCE_MACHINE_PORT="${APPLIANCE_MACHINE_PORT:-app-machine}"
 APPLIANCE_MACHINE_PORTGROUP="${APPLIANCE_MACHINE_PORTGROUP:-machine-vlan200}"
 APPLIANCE_MACHINE_VLAN_ID="${APPLIANCE_MACHINE_VLAN_ID:-200}"
 APPLIANCE_MACHINE_GATEWAY_CIDR="${APPLIANCE_MACHINE_GATEWAY_CIDR:-172.16.10.1/24}"
 
-APPLIANCE_STORAGE_PORT="${APPLIANCE_STORAGE_PORT:-appliance-storage}"
+APPLIANCE_STORAGE_PORT="${APPLIANCE_STORAGE_PORT:-app-storage}"
 APPLIANCE_STORAGE_PORTGROUP="${APPLIANCE_STORAGE_PORTGROUP:-storage-vlan201}"
 APPLIANCE_STORAGE_VLAN_ID="${APPLIANCE_STORAGE_VLAN_ID:-201}"
 APPLIANCE_STORAGE_GATEWAY_CIDR="${APPLIANCE_STORAGE_GATEWAY_CIDR:-}"
 
-APPLIANCE_MIGRATION_PORT="${APPLIANCE_MIGRATION_PORT:-appliance-migration}"
+APPLIANCE_MIGRATION_PORT="${APPLIANCE_MIGRATION_PORT:-app-migrate}"
 APPLIANCE_MIGRATION_PORTGROUP="${APPLIANCE_MIGRATION_PORTGROUP:-migration-vlan202}"
 APPLIANCE_MIGRATION_VLAN_ID="${APPLIANCE_MIGRATION_VLAN_ID:-202}"
 APPLIANCE_MIGRATION_GATEWAY_CIDR="${APPLIANCE_MIGRATION_GATEWAY_CIDR:-}"
+
+validate_linux_interface_name() {
+    local label
+    local value
+
+    label="$1"
+    value="$2"
+
+    if [[ -z "${value}" ]]; then
+        echo "${label} must not be empty." >&2
+        exit 1
+    fi
+
+    if [[ "${#value}" -gt 15 ]]; then
+        echo "${label} '${value}' is too long for a Linux interface name." >&2
+        echo "Use 15 characters or fewer." >&2
+        exit 1
+    fi
+}
+
+#### These steps validate Linux interface names before touching the host
+
+# Linux network interface names must be 15 characters or fewer.
+validate_linux_interface_name "APPLIANCE_OVS_BRIDGE" "${APPLIANCE_OVS_BRIDGE}"
+validate_linux_interface_name "APPLIANCE_MACHINE_PORT" "${APPLIANCE_MACHINE_PORT}"
+validate_linux_interface_name "APPLIANCE_STORAGE_PORT" "${APPLIANCE_STORAGE_PORT}"
+validate_linux_interface_name "APPLIANCE_MIGRATION_PORT" "${APPLIANCE_MIGRATION_PORT}"
 
 printf -v OVS_BRIDGE_REMOTE '%q' "${APPLIANCE_OVS_BRIDGE}"
 printf -v LIBVIRT_NETWORK_REMOTE '%q' "${APPLIANCE_LIBVIRT_NETWORK}"
@@ -54,6 +81,7 @@ set -euo pipefail
 
 OVS_BRIDGE=${OVS_BRIDGE_REMOTE}
 LIBVIRT_NETWORK=${LIBVIRT_NETWORK_REMOTE}
+LIBVIRT_XML_PATH="/etc/libvirt/\${LIBVIRT_NETWORK}.xml"
 DISABLE_HOST_IPV4_FORWARDING=${DISABLE_FORWARDING_REMOTE}
 MACHINE_PORT=${MACHINE_PORT_REMOTE}
 MACHINE_PORTGROUP=${MACHINE_PORTGROUP_REMOTE}
@@ -85,6 +113,33 @@ MIGRATION_PORT="__MIGRATION_PORT__"
 MIGRATION_VLAN="__MIGRATION_VLAN__"
 MIGRATION_GATEWAY="__MIGRATION_GATEWAY__"
 
+validate_linux_interface_name() {
+    local label
+    local value
+
+    label="\$1"
+    value="\$2"
+
+    if [[ -z "\${value}" ]]; then
+        echo "\${label} must not be empty." >&2
+        exit 1
+    fi
+
+    if [[ "\${#value}" -gt 15 ]]; then
+        echo "\${label} '\${value}' is too long for a Linux interface name." >&2
+        echo "Use 15 characters or fewer." >&2
+        exit 1
+    fi
+}
+
+#### These steps validate Linux interface names before changing OVS
+
+# Linux network interface names must be 15 characters or fewer.
+validate_linux_interface_name "OVS_BRIDGE" "\${OVS_BRIDGE}"
+validate_linux_interface_name "MACHINE_PORT" "\${MACHINE_PORT}"
+validate_linux_interface_name "STORAGE_PORT" "\${STORAGE_PORT}"
+validate_linux_interface_name "MIGRATION_PORT" "\${MIGRATION_PORT}"
+
 #### These steps create the OVS-only appliance switch
 
 # Create the OVS bridge without attaching any physical uplink.
@@ -94,9 +149,9 @@ ip link set dev "\${OVS_BRIDGE}" up
 #### These steps create the OpenShift machine network
 
 # Add the machine-network internal port on VLAN 200.
-ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${MACHINE_PORT}"
-ovs-vsctl set Port "\${MACHINE_PORT}" tag="\${MACHINE_VLAN}"
-ovs-vsctl set Interface "\${MACHINE_PORT}" type=internal
+ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${MACHINE_PORT}" \
+    -- set Port "\${MACHINE_PORT}" tag="\${MACHINE_VLAN}" \
+    -- set Interface "\${MACHINE_PORT}" type=internal
 ip link set dev "\${MACHINE_PORT}" up
 
 # Give the host an address on the machine network for operator troubleshooting.
@@ -108,9 +163,9 @@ fi
 #### These steps reserve optional OVS-only cluster networks
 
 # Add the storage-network port without a gateway unless configured.
-ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${STORAGE_PORT}"
-ovs-vsctl set Port "\${STORAGE_PORT}" tag="\${STORAGE_VLAN}"
-ovs-vsctl set Interface "\${STORAGE_PORT}" type=internal
+ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${STORAGE_PORT}" \
+    -- set Port "\${STORAGE_PORT}" tag="\${STORAGE_VLAN}" \
+    -- set Interface "\${STORAGE_PORT}" type=internal
 ip link set dev "\${STORAGE_PORT}" up
 ip -4 addr flush dev "\${STORAGE_PORT}"
 if [[ -n "\${STORAGE_GATEWAY}" ]]; then
@@ -118,9 +173,9 @@ if [[ -n "\${STORAGE_GATEWAY}" ]]; then
 fi
 
 # Add the migration-network port without a gateway unless configured.
-ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${MIGRATION_PORT}"
-ovs-vsctl set Port "\${MIGRATION_PORT}" tag="\${MIGRATION_VLAN}"
-ovs-vsctl set Interface "\${MIGRATION_PORT}" type=internal
+ovs-vsctl --may-exist add-port "\${OVS_BRIDGE}" "\${MIGRATION_PORT}" \
+    -- set Port "\${MIGRATION_PORT}" tag="\${MIGRATION_VLAN}" \
+    -- set Interface "\${MIGRATION_PORT}" type=internal
 ip link set dev "\${MIGRATION_PORT}" up
 ip -4 addr flush dev "\${MIGRATION_PORT}"
 if [[ -n "\${MIGRATION_GATEWAY}" ]]; then
@@ -158,11 +213,12 @@ WantedBy=multi-user.target
 UNIT
 
 systemctl daemon-reload
-systemctl enable --now appliance-install-net.service
+systemctl enable appliance-install-net.service
+systemctl restart appliance-install-net.service
 
 #### These steps define the libvirt network backed by the OVS switch
 
-cat > /etc/libvirt/appliance-switch.xml <<LIBVIRT_XML
+cat > "\${LIBVIRT_XML_PATH}" <<LIBVIRT_XML
 <network>
   <name>\${LIBVIRT_NETWORK}</name>
   <forward mode='bridge'/>
@@ -190,14 +246,15 @@ LIBVIRT_XML
 if virsh net-info "\${LIBVIRT_NETWORK}" >/dev/null 2>&1; then
     echo "Libvirt network \${LIBVIRT_NETWORK} already exists."
 else
-    virsh net-define /etc/libvirt/appliance-switch.xml
+    virsh net-define "\${LIBVIRT_XML_PATH}"
 fi
 
 # Ensure the libvirt network starts after reboot.
 virsh net-autostart "\${LIBVIRT_NETWORK}"
 
 # Start the libvirt network when it is not already running.
-if virsh net-info "\${LIBVIRT_NETWORK}" | grep -q '^Active:.*yes'; then
+network_active="\$(virsh net-info "\${LIBVIRT_NETWORK}" | sed -n 's/^Active:[[:space:]]*//p')"
+if [[ "\${network_active}" == "yes" ]]; then
     echo "Libvirt network \${LIBVIRT_NETWORK} is already active."
 else
     virsh net-start "\${LIBVIRT_NETWORK}"
