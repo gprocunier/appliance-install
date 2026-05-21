@@ -80,7 +80,9 @@ packages=(
 
 # Install all packages in one transaction so dependency resolution is consistent.
 dnf install -y "\${packages[@]}"
+
+# Reboot before service setup so virtualization and OVS services start cleanly.
 sleep 5
-echo "Rebooting"
+echo "Rebooting virtualization host"
 reboot
 REMOTE_SCRIPT

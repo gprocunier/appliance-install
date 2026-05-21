@@ -40,6 +40,10 @@ Run these from the repository root on the operator workstation:
 
 `06-create-foundry-vm.sh` creates the VM on the virtualization host.
 
+It does not attach the staged RHEL cloud image directly. It copies that image to
+a standalone foundry QCOW2, resizes the copy, then boots it with a NoCloud
+cloud-init seed ISO for hostname, SSH key, and network configuration.
+
 `07-configure-foundry-services.sh` reaches foundry through the virtualization
 host and configures:
 

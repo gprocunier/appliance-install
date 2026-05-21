@@ -44,6 +44,8 @@ run_remote systemctl is-active appliance-install-net.service
 # Confirm libvirt command-line access works.
 run_remote virsh list --all
 run_remote virsh net-list --all
+run_remote virsh pool-list --all
+run_remote virsh pool-info default
 
 # Confirm the configured OVS bridge exists without a physical uplink.
 run_remote ovs-vsctl show

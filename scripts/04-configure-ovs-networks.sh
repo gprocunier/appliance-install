@@ -50,15 +50,54 @@ validate_linux_interface_name() {
         echo "Use 15 characters or fewer." >&2
         exit 1
     fi
+
+    if [[ ! "${value}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        echo "${label} must contain only letters, numbers, dots, underscores, and hyphens." >&2
+        exit 1
+    fi
 }
 
-#### These steps validate Linux interface names before touching the host
+validate_vlan_id() {
+    local label
+    local value
 
-# Linux network interface names must be 15 characters or fewer.
+    label="$1"
+    value="$2"
+
+    if [[ ! "${value}" =~ ^[0-9]+$ ]] || (( 10#${value} < 1 || 10#${value} > 4094 )); then
+        echo "${label} must be a VLAN ID from 1 to 4094." >&2
+        exit 1
+    fi
+}
+
+#### These steps validate network settings before touching the host
+
+# Linux interface names must be short and safe for ip and OVS commands.
 validate_linux_interface_name "APPLIANCE_OVS_BRIDGE" "${APPLIANCE_OVS_BRIDGE}"
 validate_linux_interface_name "APPLIANCE_MACHINE_PORT" "${APPLIANCE_MACHINE_PORT}"
 validate_linux_interface_name "APPLIANCE_STORAGE_PORT" "${APPLIANCE_STORAGE_PORT}"
 validate_linux_interface_name "APPLIANCE_MIGRATION_PORT" "${APPLIANCE_MIGRATION_PORT}"
+
+# Libvirt names and portgroups are written into XML and command arguments.
+validate_simple_name "APPLIANCE_LIBVIRT_NETWORK" "${APPLIANCE_LIBVIRT_NETWORK}"
+validate_simple_name "APPLIANCE_MACHINE_PORTGROUP" "${APPLIANCE_MACHINE_PORTGROUP}"
+validate_simple_name "APPLIANCE_STORAGE_PORTGROUP" "${APPLIANCE_STORAGE_PORTGROUP}"
+validate_simple_name "APPLIANCE_MIGRATION_PORTGROUP" "${APPLIANCE_MIGRATION_PORTGROUP}"
+
+# VLAN IDs, CIDRs, and booleans should fail before any remote edits are made.
+validate_vlan_id "APPLIANCE_MACHINE_VLAN_ID" "${APPLIANCE_MACHINE_VLAN_ID}"
+validate_vlan_id "APPLIANCE_STORAGE_VLAN_ID" "${APPLIANCE_STORAGE_VLAN_ID}"
+validate_vlan_id "APPLIANCE_MIGRATION_VLAN_ID" "${APPLIANCE_MIGRATION_VLAN_ID}"
+validate_ipv4_cidr "APPLIANCE_MACHINE_GATEWAY_CIDR" "${APPLIANCE_MACHINE_GATEWAY_CIDR}"
+validate_boolean "APPLIANCE_DISABLE_HOST_IPV4_FORWARDING" "${APPLIANCE_DISABLE_HOST_IPV4_FORWARDING}"
+
+if [[ -n "${APPLIANCE_STORAGE_GATEWAY_CIDR}" ]]; then
+    validate_ipv4_cidr "APPLIANCE_STORAGE_GATEWAY_CIDR" "${APPLIANCE_STORAGE_GATEWAY_CIDR}"
+fi
+
+if [[ -n "${APPLIANCE_MIGRATION_GATEWAY_CIDR}" ]]; then
+    validate_ipv4_cidr "APPLIANCE_MIGRATION_GATEWAY_CIDR" "${APPLIANCE_MIGRATION_GATEWAY_CIDR}"
+fi
 
 printf -v OVS_BRIDGE_REMOTE '%q' "${APPLIANCE_OVS_BRIDGE}"
 printf -v LIBVIRT_NETWORK_REMOTE '%q' "${APPLIANCE_LIBVIRT_NETWORK}"

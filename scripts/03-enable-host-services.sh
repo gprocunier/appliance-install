@@ -42,6 +42,27 @@ systemctl enable --now virtnetworkd.socket
 systemctl enable --now virtnodedevd.socket
 systemctl enable --now virtstoraged.socket
 
+#### These steps make libvirt image storage visible to Cockpit
+
+# Cockpit and virsh expect a named pool for normal image management.
+mkdir -p /var/lib/libvirt/images
+restorecon -R /var/lib/libvirt/images >/dev/null 2>&1 || true
+
+if virsh pool-info default >/dev/null 2>&1; then
+    echo "Libvirt storage pool default already exists."
+else
+    virsh pool-define-as default dir --target /var/lib/libvirt/images
+fi
+
+virsh pool-autostart default
+
+pool_active="$(virsh pool-info default | sed -n 's/^State:[[:space:]]*//p')"
+if [[ "${pool_active}" == "running" ]]; then
+    echo "Libvirt storage pool default is already running."
+else
+    virsh pool-start default
+fi
+
 #### These steps allow operator access to Cockpit
 
 # Keep SSH and Cockpit reachable through the host firewall.

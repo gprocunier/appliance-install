@@ -30,8 +30,8 @@ operator workstation
 | Numbered scripts | Operator workstation | Each script connects to the configured host over SSH. |
 | `scripts/lib/remote.sh` | Sourced by numbered scripts | Helper functions only; do not run directly. |
 | RHSM registration commands | Virtualization host | Sent over SSH by `01-register-rhn.sh`. |
-| Package installation commands | Virtualization host | Sent over SSH by `02-install-host-packages.sh`. |
-| Service enablement commands | Virtualization host | Sent over SSH by `03-enable-host-services.sh`. |
+| Package installation commands | Virtualization host | Sent over SSH by `02-install-host-packages.sh`; that script reboots the host. |
+| Service enablement commands | Virtualization host | Sent over SSH by `03-enable-host-services.sh`; it also enables the default libvirt image pool. |
 | OVS/libvirt network commands | Virtualization host | Sent over SSH by `04-configure-ovs-networks.sh`. |
 | Foundry VM creation | Virtualization host | Sent over SSH by `06-create-foundry-vm.sh`. |
 | Foundry service commands | Foundry VM | Sent through the virtualization host jump path by `07-configure-foundry-services.sh`. |
@@ -81,6 +81,7 @@ Run these from the repository root:
 ```bash
 ./scripts/01-register-rhn.sh
 ./scripts/02-install-host-packages.sh
+# wait for the virtualization host to reboot
 ./scripts/03-enable-host-services.sh
 ./scripts/04-configure-ovs-networks.sh
 ./scripts/05-verify-virt-host.sh

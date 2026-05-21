@@ -15,6 +15,7 @@ Current host-prep order:
 ```bash
 ./scripts/01-register-rhn.sh
 ./scripts/02-install-host-packages.sh
+# wait for the virtualization host to reboot
 ./scripts/03-enable-host-services.sh
 ./scripts/04-configure-ovs-networks.sh
 ./scripts/05-verify-virt-host.sh
