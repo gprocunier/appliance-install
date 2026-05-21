@@ -16,8 +16,12 @@
     <header class="site-header">
       <div class="site-header__inner">
         <p class="eyebrow">How-To Guide</p>
-        <h1 class="site-title"><a href="../index.html">Customize Mirrored Content</a></h1>
+        <h1 class="site-title">Customize Mirrored Content</h1>
         <p class="site-tagline">Change what gets baked into <code>appliance.raw</code> without putting secrets in tracked files.</p>
+        <nav class="site-actions" aria-label="Page links">
+          <a href="../index.html">Start Here</a>
+          <a href="https://github.com/gprocunier/appliance-install">GitHub Repo</a>
+        </nav>
       </div>
     </header>
 
@@ -68,8 +72,9 @@ podman login --authfile config/pull-secret.multi-registry.json cp.icr.io</code><
           <pre><code>./scripts/10-prepare-appliance-assets.sh
 ./scripts/11-build-appliance-image.sh
 ./scripts/12-create-cluster-config-image.sh
+./scripts/14-destroy-ocp-vms.sh
 APPLIANCE_REFRESH_BASE_IMAGE=true ./scripts/13-create-ocp-vms.sh</code></pre>
-          <p>Changing mirrored content changes <code>appliance.raw</code>, not only the Agent Installer config ISO.</p>
+          <p>Changing mirrored content changes <code>appliance.raw</code>, not only the Agent Installer config ISO. Existing OpenShift VMs must be removed before script <code>13</code> can recreate them from the refreshed base image.</p>
         </section>
       </article>
     </main>

@@ -16,8 +16,12 @@
     <header class="site-header">
       <div class="site-header__inner">
         <p class="eyebrow">Reference</p>
-        <h1 class="site-title"><a href="../index.html">Script Reference</a></h1>
+        <h1 class="site-title">Script Reference</h1>
         <p class="site-tagline">Exact responsibilities for the numbered scripts and standalone foundry variant.</p>
+        <nav class="site-actions" aria-label="Page links">
+          <a href="../index.html">Start Here</a>
+          <a href="https://github.com/gprocunier/appliance-install">GitHub Repo</a>
+        </nav>
       </div>
     </header>
 
@@ -49,7 +53,7 @@
               <tr><td><code>11-build-appliance-image.sh</code></td><td>Workstation</td><td>Runs the appliance builder container and writes <code>appliance.raw</code>.</td></tr>
               <tr><td><code>12-create-cluster-config-image.sh</code></td><td>Workstation</td><td>Creates <code>agentconfig.noarch.iso</code> and installer state on foundry.</td></tr>
               <tr><td><code>13-create-ocp-vms.sh</code></td><td>Workstation</td><td>Transfers artifacts to the virtualization host and creates <code>ocp-01</code>, <code>ocp-02</code>, and <code>ocp-03</code>.</td></tr>
-              <tr><td><code>14-destroy-ocp-vms.sh</code></td><td>Workstation</td><td>Destroys OpenShift VM domains and removes their overlay disks for reimage.</td></tr>
+              <tr><td><code>14-destroy-ocp-vms.sh</code></td><td>Workstation</td><td>Destroys OpenShift VM domains and removes their overlay disks while keeping the appliance base image.</td></tr>
               <tr><td><code>15-watch-ocp-install.sh</code></td><td>Workstation</td><td>Streams bootstrap and install wait commands through foundry.</td></tr>
               <tr><td><code>16-verify-ocp-cluster.sh</code></td><td>Workstation</td><td>Creates a temporary API tunnel and runs sanitized <code>oc</code> checks.</td></tr>
             </tbody>
