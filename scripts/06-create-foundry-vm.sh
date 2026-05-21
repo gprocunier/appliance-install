@@ -220,7 +220,10 @@ write_files:
       \${FOUNDRY_USER} ALL=(ALL) NOPASSWD:ALL
 runcmd:
   - [ usermod, --password, '\${FOUNDRY_CONSOLE_PASSWORD_HASH}', '\${FOUNDRY_USER}' ]
-  - [ sh, -c, 'if id cloud-user >/dev/null 2>&1; then usermod --password "\$1" cloud-user; fi', foundry-cloud-user-password, '\${FOUNDRY_CONSOLE_PASSWORD_HASH}' ]
+  - |
+    if id cloud-user >/dev/null 2>&1; then
+        usermod --password '\${FOUNDRY_CONSOLE_PASSWORD_HASH}' cloud-user
+    fi
 growpart:
   mode: auto
   devices:
