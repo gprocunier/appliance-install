@@ -44,6 +44,10 @@ It does not attach the staged RHEL cloud image directly. It copies that image to
 a standalone foundry QCOW2, resizes the copy, then boots it with a NoCloud
 cloud-init seed ISO for hostname, SSH key, and network configuration.
 
+The VM uses VNC graphics bound to `127.0.0.1` on the virtualization host. That
+keeps the VNC service off the lab networks while still giving Cockpit a
+graphical console to proxy.
+
 `07-configure-foundry-services.sh` reaches foundry through the virtualization
 host and configures:
 

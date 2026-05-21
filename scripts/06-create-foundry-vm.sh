@@ -232,7 +232,7 @@ virt-install \
     --disk "path=\${FOUNDRY_SEED_ISO},device=cdrom" \
     --network "network=\${FOUNDRY_UPSTREAM_NETWORK},model=virtio,mac=\${FOUNDRY_UPSTREAM_MAC}" \
     --network "network=\${FOUNDRY_APPLIANCE_NETWORK},source.portgroup=\${FOUNDRY_APPLIANCE_PORTGROUP},model=virtio,mac=\${FOUNDRY_APPLIANCE_MAC}" \
-    --graphics vnc,listen=none \
+    --graphics vnc,listen=127.0.0.1 \
     --video virtio \
     --console pty,target_type=serial \
     --noautoconsole
