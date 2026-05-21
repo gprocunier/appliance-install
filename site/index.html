@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Appliance Install | OpenShift appliance lab</title>
+    <meta name="description" content="Diátaxis documentation for building, reimaging, and explaining a three-node OpenShift appliance lab.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/site.css">
+    <script type="module" src="assets/site.js"></script>
+  </head>
+  <body data-page="home" data-base="">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">OpenShift Appliance Lab</p>
+        <h1 class="site-title"><a href="index.html">Appliance Install</a></h1>
+        <p class="site-tagline">Readable scripts and partner-facing documentation for building a disconnected three-node OpenShift appliance demo.</p>
+        <nav class="site-actions" aria-label="Project links">
+          <a href="https://github.com/gprocunier/appliance-install">GitHub Repo</a>
+          <a href="tutorials/full-lab.html">First Run</a>
+          <a href="reference/scripts.html">Scripts</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Project Shape</h2>
+          <p class="context-kicker">Build, boot, repeat</p>
+          <p>The full path prepares a virt host, creates foundry, builds the appliance image, boots three nodes, and verifies the cluster.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">This site is organized with Diátaxis: tutorials teach a first path, how-to guides solve focused jobs, reference pages give exact facts, and explanation pages describe why the lab is built this way.</p>
+
+        <section id="start">
+          <h2>Start Here</h2>
+          <p>Pick the page by the job you need the documentation to do.</p>
+          <table>
+            <thead>
+              <tr><th>I need...</th><th>Start with</th><th>What I will know</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>To build the whole virtualized lab</td><td><a href="tutorials/full-lab.html">Full Lab First Run</a></td><td>The order to prepare the host, foundry, appliance image, VMs, install watch, and verification.</td></tr>
+              <tr><td>To build only <code>appliance.raw</code></td><td><a href="tutorials/standalone-foundry.html">Standalone Foundry Build</a></td><td>How to use an existing RHEL 10.x server as a build-only foundry.</td></tr>
+              <tr><td>To reset for a workshop replay</td><td><a href="how-to/reimage-cluster.html">Reimage The Cluster</a></td><td>Which scripts destroy only OpenShift node VMs and recreate them from the current image/config.</td></tr>
+              <tr><td>To add operators or private content</td><td><a href="how-to/customize-content.html">Customize Mirrored Content</a></td><td>Where operator catalogs, package lists, additional images, and registry auth belong.</td></tr>
+              <tr><td>Exact script responsibilities</td><td><a href="reference/scripts.html">Script Reference</a></td><td>What each numbered script changes and where it runs.</td></tr>
+              <tr><td>To understand the topology</td><td><a href="explanation/architecture.html">Architecture</a></td><td>Why foundry, OVS, IdM DNS/NTP, and the image-build flow are separated.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="routes">
+          <h2>Documentation Modes</h2>
+          <div class="route-grid">
+            <article class="route-card">
+              <h3>Tutorials</h3>
+              <p>Follow a known path from a clean starting point. Use these when you are learning or rehearsing the workshop.</p>
+              <a class="action-link" href="tutorials/full-lab.html">Run the full lab</a>
+            </article>
+            <article class="route-card">
+              <h3>How-To Guides</h3>
+              <p>Perform one task after the environment exists: reimage nodes, change mirrored content, or rebuild image inputs.</p>
+              <a class="action-link" href="how-to/reimage-cluster.html">Reimage nodes</a>
+            </article>
+            <article class="route-card">
+              <h3>Reference</h3>
+              <p>Look up exact script roles, config files, defaults, and artifacts without extra narrative.</p>
+              <a class="action-link" href="reference/scripts.html">Read script facts</a>
+            </article>
+            <article class="route-card">
+              <h3>Explanation</h3>
+              <p>Understand the architecture decisions: disconnected networking, foundry responsibilities, and image handoff.</p>
+              <a class="action-link" href="explanation/architecture.html">Read architecture</a>
+            </article>
+          </div>
+        </section>
+
+        <section id="topology">
+          <h2>Architecture Mini-Map</h2>
+          <figure class="diagram-panel">
+            <figcaption>All operator actions start from the workstation. The OpenShift nodes stay on the OVS-only appliance network.</figcaption>
+            <div class="topology-map" role="img" aria-label="Operator workstation connects to virtualization host, foundry VM, and three OpenShift appliance VMs">
+              <div class="topology-node"><strong>Operator workstation</strong><span>Repo clone and ignored local config.</span></div>
+              <div class="topology-node"><strong>Virtualization host</strong><span>libvirt, Open vSwitch, Cockpit, VM disks.</span></div>
+              <div class="topology-node"><strong>Foundry VM</strong><span>DNS, NTP, staging, appliance image build.</span></div>
+              <div class="topology-node"><strong>ocp-01/02/03</strong><span>Single-homed appliance nodes on <code>lab-switch</code>.</span></div>
+            </div>
+          </figure>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <span>Appliance Install documentation. Keep tracked content publishable and local secrets ignored.</span>
+    </footer>
+  </body>
+</html>

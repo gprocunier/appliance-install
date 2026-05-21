@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Configuration Reference | Appliance Install</title>
+    <meta name="description" content="Reference for publishable example config files and ignored local config files.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="reference-config" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">Reference</p>
+        <h1 class="site-title"><a href="../index.html">Configuration Reference</a></h1>
+        <p class="site-tagline">What each config file controls and which files must stay ignored.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Publishability</h2>
+          <p class="context-kicker">Examples tracked, real values ignored</p>
+          <p>Tracked examples contain placeholders. Real secrets and lab values belong in ignored local files.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Use this reference when deciding where to put environment-specific values before running a script.</p>
+
+        <section id="config-files">
+          <h2>Config Files</h2>
+          <table>
+            <thead>
+              <tr><th>Tracked example</th><th>Ignored local file</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>config/host.env.example</code></td><td><code>config/host.env</code></td><td>Virtualization host address, SSH user, SSH key, and repo defaults.</td></tr>
+              <tr><td><code>config/rhsm.env.example</code></td><td><code>config/rhsm.env</code></td><td>Red Hat org ID and activation key values.</td></tr>
+              <tr><td><code>config/network.env.example</code></td><td><code>config/network.env</code></td><td>OVS bridge, libvirt network, machine VLAN, and host gateway settings.</td></tr>
+              <tr><td><code>config/foundry.env.example</code></td><td><code>config/foundry.env</code></td><td>Foundry VM, console passwords, IdM passwords, DNS forwarders, DNS records, and staging paths.</td></tr>
+              <tr><td><code>config/foundry-standalone.env.example</code></td><td><code>config/foundry-standalone.env</code></td><td>Existing RHEL 10.x standalone host SSH access and local output path.</td></tr>
+              <tr><td><code>config/appliance.env.example</code></td><td><code>config/appliance.env</code></td><td>OpenShift release, appliance build settings, pull secret path, core password placeholder, cluster identity, and VM disk directory.</td></tr>
+              <tr><td><code>config/operators.env.example</code></td><td><code>config/operators.env</code></td><td>Operator catalog image, package names, and channels mirrored into <code>appliance.raw</code>.</td></tr>
+              <tr><td><code>config/additional-images.env.example</code></td><td><code>config/additional-images.env</code></td><td>Optional non-operator image refs mirrored through ApplianceConfig <code>additionalImages</code>.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="registry-files">
+          <h2>Registry And Content Examples</h2>
+          <table>
+            <thead>
+              <tr><th>File</th><th>Use</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>config/pull-secret.multi-registry.json.example</code></td><td>Sanitized shape for Red Hat, IBM, Quay, and generic private registry auth.</td></tr>
+              <tr><td><code>config/operators.ibm-cloudpak.env.example</code></td><td>Example IBM Cloud Pak operator catalog additions.</td></tr>
+              <tr><td><code>config/additional-images.ibm-cloudpak.env.example</code></td><td>Example IBM Cloud Pak non-operator image additions.</td></tr>
+              <tr><td><code>config/cloudpak.images.example</code></td><td>Example one-image-per-line list for larger private content sets.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="defaults">
+          <h2>Published Defaults</h2>
+          <table>
+            <thead>
+              <tr><th>Setting</th><th>Default</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>OpenShift release</td><td><code>4.21</code>, <code>stable</code>, <code>x86_64</code></td></tr>
+              <tr><td>OVS/libvirt network</td><td><code>lab-switch</code></td></tr>
+              <tr><td>Machine CIDR</td><td><code>172.16.10.0/24</code></td></tr>
+              <tr><td>Foundry appliance IP</td><td><code>172.16.10.10</code></td></tr>
+              <tr><td>OpenShift nodes</td><td><code>ocp-01</code>, <code>ocp-02</code>, <code>ocp-03</code></td></tr>
+              <tr><td>Node resources</td><td><code>12</code> vCPU, <code>32 GiB</code> RAM, <code>200 GiB</code> disk per node</td></tr>
+              <tr><td>Host artifact directory</td><td><code>/home/libvirt/images/appliance-install</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">Keep generated appliance YAML, pull secrets, and kubeconfigs out of tracked documentation.</footer>
+  </body>
+</html>

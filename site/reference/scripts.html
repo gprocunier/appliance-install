@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Script Reference | Appliance Install</title>
+    <meta name="description" content="Reference for appliance-install numbered scripts and where they run.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="reference-scripts" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">Reference</p>
+        <h1 class="site-title"><a href="../index.html">Script Reference</a></h1>
+        <p class="site-tagline">Exact responsibilities for the numbered scripts and standalone foundry variant.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Run all main numbered scripts from the repository root on the operator workstation. The scripts use SSH to make changes on the target systems.</p>
+
+        <section id="main-scripts">
+          <h2>Main Workflow Scripts</h2>
+          <table>
+            <thead>
+              <tr><th>Script</th><th>Runs from</th><th>Changes</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>01-register-rhn.sh</code></td><td>Workstation</td><td>Registers the virtualization host and enables required repositories.</td></tr>
+              <tr><td><code>02-install-host-packages.sh</code></td><td>Workstation</td><td>Installs virtualization, OVS, Cockpit, tmux, vim, and image tools; then reboots the host.</td></tr>
+              <tr><td><code>03-enable-host-services.sh</code></td><td>Workstation</td><td>Enables host services and the default libvirt image pool.</td></tr>
+              <tr><td><code>04-configure-ovs-networks.sh</code></td><td>Workstation</td><td>Creates persistent OVS and libvirt network setup for <code>lab-switch</code>.</td></tr>
+              <tr><td><code>05-verify-virt-host.sh</code></td><td>Workstation</td><td>Verifies virtualization, libvirt, OVS, services, and host state.</td></tr>
+              <tr><td><code>06-create-foundry-vm.sh</code></td><td>Workstation</td><td>Copies the RHEL cloud image, creates the foundry disk/seed ISO, and boots foundry.</td></tr>
+              <tr><td><code>07-configure-foundry-console.sh</code></td><td>Workstation</td><td>Sets console passwords for <code>appliance</code> and <code>cloud-user</code>; keeps <code>appliance</code> passwordless sudo.</td></tr>
+              <tr><td><code>08-configure-foundry-services.sh</code></td><td>Workstation</td><td>Configures IdM DNS, NTP, HTTP staging, firewall, podman, and image tooling on foundry.</td></tr>
+              <tr><td><code>09-verify-foundry-services.sh</code></td><td>Workstation</td><td>Verifies foundry DNS, NTP, HTTP, firewall, and upstream DNS recursion behavior.</td></tr>
+              <tr><td><code>10-prepare-appliance-assets.sh</code></td><td>Workstation</td><td>Copies local-only secrets to foundry and writes generated appliance, install, and agent config.</td></tr>
+              <tr><td><code>11-build-appliance-image.sh</code></td><td>Workstation</td><td>Runs the appliance builder container and writes <code>appliance.raw</code>.</td></tr>
+              <tr><td><code>12-create-cluster-config-image.sh</code></td><td>Workstation</td><td>Creates <code>agentconfig.noarch.iso</code> and installer state on foundry.</td></tr>
+              <tr><td><code>13-create-ocp-vms.sh</code></td><td>Workstation</td><td>Transfers artifacts to the virtualization host and creates <code>ocp-01</code>, <code>ocp-02</code>, and <code>ocp-03</code>.</td></tr>
+              <tr><td><code>14-destroy-ocp-vms.sh</code></td><td>Workstation</td><td>Destroys OpenShift VM domains and removes their overlay disks for reimage.</td></tr>
+              <tr><td><code>15-watch-ocp-install.sh</code></td><td>Workstation</td><td>Streams bootstrap and install wait commands through foundry.</td></tr>
+              <tr><td><code>16-verify-ocp-cluster.sh</code></td><td>Workstation</td><td>Creates a temporary API tunnel and runs sanitized <code>oc</code> checks.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="standalone-scripts">
+          <h2>Standalone Foundry Scripts</h2>
+          <table>
+            <thead>
+              <tr><th>Script</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>01-register-rhn.sh</code></td><td>Registers the existing RHEL 10.x host and enables required repositories.</td></tr>
+              <tr><td><code>02-install-packages.sh</code></td><td>Installs container, image, and troubleshooting tools needed for the build.</td></tr>
+              <tr><td><code>03-verify-host.sh</code></td><td>Verifies RHEL version, route, DNS, registry reachability, and tools.</td></tr>
+              <tr><td><code>04-prepare-appliance-assets.sh</code></td><td>Copies pull secret and writes <code>appliance-config.yaml</code>.</td></tr>
+              <tr><td><code>05-build-appliance-image.sh</code></td><td>Builds <code>appliance.raw</code>.</td></tr>
+              <tr><td><code>06-fetch-appliance-image.sh</code></td><td>Optionally copies <code>appliance.raw</code> back to the workstation.</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">Reference pages are for lookup; use tutorials for step-by-step flow.</footer>
+  </body>
+</html>

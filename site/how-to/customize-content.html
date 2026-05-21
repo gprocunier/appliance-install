@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Customize Mirrored Content | Appliance Install</title>
+    <meta name="description" content="How to customize operators, additional images, and registry authentication for the appliance image.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="howto-content" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">How-To Guide</p>
+        <h1 class="site-title"><a href="../index.html">Customize Mirrored Content</a></h1>
+        <p class="site-tagline">Change what gets baked into <code>appliance.raw</code> without putting secrets in tracked files.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Rule</h2>
+          <p class="context-kicker">Ignored files only</p>
+          <p>Real pull secrets, registry tokens, private image refs, and environment-specific choices belong in ignored local config.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Use this guide when the workshop needs a different operator set, IBM Cloud Pak content, private Quay content, or other non-operator image refs in the appliance image.</p>
+
+        <section id="operator-list">
+          <h2>Change Operator Packages</h2>
+          <p>Edit the ignored operator config. Script <code>10</code> reads it and writes the ApplianceConfig operator section.</p>
+          <pre><code>cp config/operators.env.example config/operators.env
+vi config/operators.env</code></pre>
+          <p>The default list includes OpenShift Virtualization, ODF, NMState, cert-manager, Network Observability, Web Terminal, and Quay.</p>
+        </section>
+
+        <section id="additional-images">
+          <h2>Add Non-Operator Images</h2>
+          <p>Use <code>config/additional-images.env</code> for a short list, or point it at an ignored one-image-per-line file for larger content sets.</p>
+          <pre><code>cp config/additional-images.env.example config/additional-images.env
+cp config/cloudpak.images.example config/cloudpak.images
+vi config/additional-images.env
+vi config/cloudpak.images</code></pre>
+        </section>
+
+        <section id="auth">
+          <h2>Add Registry Auth</h2>
+          <p>The pull secret referenced by <code>APPLIANCE_PULL_SECRET_FILE</code> must include every private registry used by operator catalogs or additional images.</p>
+          <pre><code>cp config/pull-secret.multi-registry.json.example \
+    config/pull-secret.multi-registry.json
+
+podman login --authfile config/pull-secret.multi-registry.json registry.redhat.io
+podman login --authfile config/pull-secret.multi-registry.json quay.io
+podman login --authfile config/pull-secret.multi-registry.json cp.icr.io</code></pre>
+          <p>Point ignored <code>config/appliance.env</code> at the real pull secret file with an absolute path.</p>
+        </section>
+
+        <section id="rebuild">
+          <h2>Rebuild After Content Changes</h2>
+          <pre><code>./scripts/10-prepare-appliance-assets.sh
+./scripts/11-build-appliance-image.sh
+./scripts/12-create-cluster-config-image.sh
+APPLIANCE_REFRESH_BASE_IMAGE=true ./scripts/13-create-ocp-vms.sh</code></pre>
+          <p>Changing mirrored content changes <code>appliance.raw</code>, not only the Agent Installer config ISO.</p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">Script 10 validates pull-secret JSON and rejects placeholder auth values before copying it to foundry.</footer>
+  </body>
+</html>

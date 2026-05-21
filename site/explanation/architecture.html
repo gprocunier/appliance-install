@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Architecture | Appliance Install</title>
+    <meta name="description" content="Explanation of the OpenShift appliance lab architecture and disconnected network model.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="explanation-architecture" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">Explanation</p>
+        <h1 class="site-title"><a href="../index.html">Architecture</a></h1>
+        <p class="site-tagline">Why the lab separates operator control, virtualization, foundry services, and disconnected OpenShift nodes.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Core Idea</h2>
+          <p class="context-kicker">Foundry is the boundary</p>
+          <p>Foundry can prepare content upstream, then serve the isolated appliance network without making the OpenShift nodes internet-routable.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">The lab is designed to be understandable during a customer demonstration: every step is run from the operator workstation, but each system has a narrow responsibility.</p>
+
+        <section id="responsibilities">
+          <h2>Responsibility Split</h2>
+          <table>
+            <thead>
+              <tr><th>Part</th><th>Responsibility</th><th>Evidence to check</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Operator workstation</td><td>Owns the repo clone, ignored local config, and script execution.</td><td>Numbered scripts are launched from the repository root.</td></tr>
+              <tr><td>Virtualization host</td><td>Runs libvirt, Open vSwitch, Cockpit, foundry, and OpenShift node VMs.</td><td><code>virsh list --all</code>, <code>ovs-vsctl show</code>, and the host artifact directory.</td></tr>
+              <tr><td>Foundry VM</td><td>Provides DNS, NTP, HTTP staging, registry auth staging, appliance image build, and installer state.</td><td>Scripts <code>09</code>, <code>11</code>, and <code>12</code> show service and artifact status.</td></tr>
+              <tr><td>OpenShift nodes</td><td>Boot from the appliance image on an OVS-only network.</td><td>Script <code>16</code> reports nodes, ClusterVersion, operators, console route, and PackageManifest availability.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="network">
+          <h2>Disconnected Network Model</h2>
+          <p>The three OpenShift VMs are single-homed on <code>lab-switch</code>. The OVS bridge has no physical uplink and the host does not provide NAT for the appliance network.</p>
+          <figure class="diagram-panel">
+            <figcaption>Foundry is the only intentionally dual-homed component in the full virtualized lab.</figcaption>
+            <div class="topology-map" role="img" aria-label="Disconnected appliance network topology">
+              <div class="topology-node"><strong>Upstream network</strong><span>Used by foundry for registration, downloads, and mirroring.</span></div>
+              <div class="topology-node"><strong>Foundry</strong><span>Dual NIC boundary with DNS/NTP and build services.</span></div>
+              <div class="topology-node"><strong>lab-switch</strong><span>OVS-only appliance network with no external uplink.</span></div>
+              <div class="topology-node"><strong>OpenShift VMs</strong><span>Boot and install using content already staged into the appliance image/config.</span></div>
+            </div>
+          </figure>
+        </section>
+
+        <section id="dns-ntp">
+          <h2>DNS And NTP</h2>
+          <p>Foundry runs IdM-backed DNS for <code>appliance.workshop.lan</code> and NTP for the appliance network. Script <code>10</code> writes the configured NTP source into <code>agent-config.yaml</code> as <code>additionalNTPSources</code>.</p>
+          <p>IdM forwarders are configured so foundry itself can resolve Red Hat CDN names while preparing content. Recursion and query-cache access are restricted to localhost, so the appliance network gets lab DNS without becoming an internet resolver path.</p>
+        </section>
+
+        <section id="image-flow">
+          <h2>Image Build Flow</h2>
+          <ol class="flow-list">
+            <li class="flow-step"><span class="flow-step__number">1</span><strong>Prepare inputs</strong><br>Script <code>10</code> writes appliance, install, and agent config on foundry.</li>
+            <li class="flow-step"><span class="flow-step__number">2</span><strong>Build image</strong><br>Script <code>11</code> mirrors release, operator, and additional image content into <code>appliance.raw</code>.</li>
+            <li class="flow-step"><span class="flow-step__number">3</span><strong>Create ISO</strong><br>Script <code>12</code> creates <code>agentconfig.noarch.iso</code> and installer state.</li>
+            <li class="flow-step"><span class="flow-step__number">4</span><strong>Boot nodes</strong><br>Script <code>13</code> transfers artifacts to the host and creates the node overlays.</li>
+          </ol>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">For exact commands, use the tutorials and reference pages.</footer>
+  </body>
+</html>

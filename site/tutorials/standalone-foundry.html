@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Standalone Foundry Build | Appliance Install</title>
+    <meta name="description" content="Tutorial for using an existing RHEL 10.x host to produce the OpenShift appliance image.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="tutorial-standalone" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">Tutorial</p>
+        <h1 class="site-title"><a href="../index.html">Standalone Foundry Build</a></h1>
+        <p class="site-tagline">Mirror content and produce <code>appliance.raw</code> on an existing RHEL 10.x server with normal flat networking.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Scope</h2>
+          <p class="context-kicker">Build only</p>
+          <p>This path does not create VMs, OVS networks, IdM DNS, NTP service, HTTP staging, or a cluster config ISO.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Use the standalone path when a RHEL 10.x server can reach the internet through its default gateway and only needs to build the appliance disk image.</p>
+
+        <section id="config">
+          <h2>1. Create Local Config</h2>
+          <pre><code>cp config/foundry-standalone.env.example config/foundry-standalone.env
+cp config/rhsm.env.example config/rhsm.env
+cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env</code></pre>
+          <p>Set <code>APPLIANCE_STANDALONE_HOST</code>, <code>APPLIANCE_STANDALONE_USER</code>, <code>APPLIANCE_STANDALONE_SSH_KEY</code>, and <code>APPLIANCE_PULL_SECRET_FILE</code> in the ignored local files.</p>
+        </section>
+
+        <section id="prepare-host">
+          <h2>2. Register And Verify The Host</h2>
+          <pre><code>./scripts/foundry-standalone/01-register-rhn.sh
+./scripts/foundry-standalone/02-install-packages.sh
+./scripts/foundry-standalone/03-verify-host.sh</code></pre>
+          <p>The verification script checks RHEL 10.x, default route, DNS, registry reachability, and required build tools.</p>
+        </section>
+
+        <section id="build">
+          <h2>3. Prepare And Build</h2>
+          <pre><code>./scripts/foundry-standalone/04-prepare-appliance-assets.sh
+./scripts/foundry-standalone/05-build-appliance-image.sh</code></pre>
+          <p>The output image is written on the standalone host at <code>${APPLIANCE_ASSETS_DIR}/appliance.raw</code>. With tracked defaults, that is <code>/srv/appliance/assets/appliance.raw</code>.</p>
+        </section>
+
+        <section id="fetch">
+          <h2>4. Optionally Fetch The Image</h2>
+          <pre><code>./scripts/foundry-standalone/06-fetch-appliance-image.sh</code></pre>
+          <p>The optional fetch script copies <code>appliance.raw</code> into <code>APPLIANCE_STANDALONE_LOCAL_OUTPUT_DIR</code>, which defaults to <code>work/foundry-standalone</code>.</p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">Use the full lab tutorial when the workshop also needs VM deployment and disconnected network services.</footer>
+  </body>
+</html>

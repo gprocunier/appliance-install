@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reimage The Cluster | Appliance Install</title>
+    <meta name="description" content="How to wipe and recreate OpenShift appliance VMs for a workshop replay.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="howto-reimage" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">How-To Guide</p>
+        <h1 class="site-title"><a href="../index.html">Reimage The Cluster</a></h1>
+        <p class="site-tagline">Remove the OpenShift node VMs and recreate them from the current appliance base image and config ISO.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Use this guide when the cluster should be destroyed and redeployed for a customer demonstration. It does not reclaim foundry or virtualization host setup.</p>
+
+        <section id="same-image">
+          <h2>Reimage With The Existing Base Image</h2>
+          <p>This is the normal workshop reset path. It refreshes installer state and node overlays, then reuses the existing <code>appliance-base.qcow2</code>.</p>
+          <pre><code>./scripts/10-prepare-appliance-assets.sh
+./scripts/12-create-cluster-config-image.sh
+
+./scripts/14-destroy-ocp-vms.sh
+./scripts/13-create-ocp-vms.sh
+./scripts/15-watch-ocp-install.sh
+./scripts/16-verify-ocp-cluster.sh</code></pre>
+        </section>
+
+        <section id="new-content">
+          <h2>Reimage After Mirrored Content Changes</h2>
+          <p>If operators, additional images, or registry auth changed, rebuild <code>appliance.raw</code> and force script <code>13</code> to refresh the virtualization host base image.</p>
+          <pre><code>./scripts/10-prepare-appliance-assets.sh
+./scripts/11-build-appliance-image.sh
+./scripts/12-create-cluster-config-image.sh
+
+./scripts/14-destroy-ocp-vms.sh
+APPLIANCE_REFRESH_BASE_IMAGE=true ./scripts/13-create-ocp-vms.sh
+./scripts/15-watch-ocp-install.sh
+./scripts/16-verify-ocp-cluster.sh</code></pre>
+        </section>
+
+        <section id="guardrails">
+          <h2>Guardrails</h2>
+          <ul>
+            <li>Script <code>14</code> removes only the OpenShift VM domains and overlay disks.</li>
+            <li>Do not use this path to recreate foundry. Foundry has a separate rebuild procedure in the Markdown runbook.</li>
+            <li>Script <code>12</code> starts a new installer state, including the foundry-local kubeconfig used by scripts <code>15</code> and <code>16</code>.</li>
+          </ul>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">The reimage path is meant for fast, repeatable workshop resets.</footer>
+  </body>
+</html>

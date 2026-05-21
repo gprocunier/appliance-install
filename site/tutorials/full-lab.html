@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Full Lab First Run | Appliance Install</title>
+    <meta name="description" content="Tutorial for running the full virtualized OpenShift appliance lab for the first time.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/site.css">
+    <script type="module" src="../assets/site.js"></script>
+  </head>
+  <body data-page="tutorial-full" data-base="../">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <p class="eyebrow">Tutorial</p>
+        <h1 class="site-title"><a href="../index.html">Full Lab First Run</a></h1>
+        <p class="site-tagline">Prepare the virtualization host, create foundry, build the appliance image, boot three VMs, and verify the cluster.</p>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="side-column">
+        <div data-docs-nav></div>
+        <section class="context-block">
+          <h2>Outcome</h2>
+          <p class="context-kicker">Three-node demo</p>
+          <p>The end state is an installed OpenShift 4.21 appliance cluster on <code>ocp-01</code>, <code>ocp-02</code>, and <code>ocp-03</code>.</p>
+        </section>
+      </aside>
+
+      <article class="content-column markdown-body">
+        <p class="lead">Use this tutorial when the lab is new or when you are rehearsing the workshop from the beginning. Run every command from the repository root on the operator workstation.</p>
+
+        <section id="prepare-config">
+          <h2>1. Create Local Config</h2>
+          <p>The tracked examples are safe to publish. The copied files are ignored by git and hold the real lab values.</p>
+          <pre><code>cp config/host.env.example config/host.env
+cp config/rhsm.env.example config/rhsm.env
+cp config/network.env.example config/network.env
+cp config/foundry.env.example config/foundry.env
+cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env</code></pre>
+          <p>Edit the copied files before continuing. Replace placeholders for host access, Red Hat registration, pull secret path, console passwords, DNS forwarders, and image locations.</p>
+        </section>
+
+        <section id="host">
+          <h2>2. Prepare The Virtualization Host</h2>
+          <p>Scripts <code>01</code> through <code>05</code> register the remote host, install packages, enable services, create OVS/libvirt networking, and verify the baseline.</p>
+          <pre><code>./scripts/01-register-rhn.sh
+./scripts/02-install-host-packages.sh
+# wait for the virtualization host to reboot
+./scripts/03-enable-host-services.sh
+./scripts/04-configure-ovs-networks.sh
+./scripts/05-verify-virt-host.sh</code></pre>
+          <p>Script <code>02</code> intentionally reboots the host. Wait until SSH returns before running script <code>03</code>.</p>
+        </section>
+
+        <section id="foundry">
+          <h2>3. Create And Configure Foundry</h2>
+          <p>Foundry is dual-homed: one NIC reaches upstream content and one NIC serves the isolated appliance network.</p>
+          <pre><code>./scripts/06-create-foundry-vm.sh
+./scripts/07-configure-foundry-console.sh
+./scripts/08-configure-foundry-services.sh
+./scripts/09-verify-foundry-services.sh</code></pre>
+          <p>Script <code>08</code> can be long while packages install and IdM configures DNS. Script <code>09</code> is the checkpoint for DNS, NTP, HTTP staging, and firewall state.</p>
+        </section>
+
+        <section id="build-image">
+          <h2>4. Build Appliance Assets</h2>
+          <p>Scripts <code>10</code> through <code>12</code> prepare appliance inputs on foundry, build <code>appliance.raw</code>, and create the Agent Installer config ISO.</p>
+          <pre><code>./scripts/10-prepare-appliance-assets.sh
+./scripts/11-build-appliance-image.sh
+./scripts/12-create-cluster-config-image.sh</code></pre>
+          <p>The build step mirrors OpenShift release content, configured operators, and optional additional images. Expect this phase to take the longest.</p>
+        </section>
+
+        <section id="install">
+          <h2>5. Boot And Verify The Cluster</h2>
+          <p>Script <code>13</code> pulls the artifacts from foundry to the virtualization host, converts the base image when needed, and creates the three OpenShift VMs.</p>
+          <pre><code>./scripts/13-create-ocp-vms.sh
+./scripts/15-watch-ocp-install.sh
+./scripts/16-verify-ocp-cluster.sh</code></pre>
+          <p>Script <code>14</code> is deliberately skipped on the first run. It is only for removing existing node VMs before a reimage.</p>
+        </section>
+
+        <section id="next">
+          <h2>Next Step</h2>
+          <p>After the first successful install, use <a href="../how-to/reimage-cluster.html">Reimage The Cluster</a> to reset the demo quickly without rebuilding the entire environment.</p>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">Tutorial content is derived from the tracked numbered scripts and sanitized examples.</footer>
+  </body>
+</html>
