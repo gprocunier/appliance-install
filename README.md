@@ -2,10 +2,9 @@
 
 Customer-demo setup assets for the Calabi on-prem OpenShift appliance lab.
 
-The latest validated appliance install completed successfully with OpenShift
-4.21.15 from the 4.21 appliance build. Keep validation notes publishable: do
-not record kubeadmin passwords, pull secrets, RHSM credentials, or private
-workstation paths in this repository.
+Tracked content is intended to be publishable. Keep kubeadmin passwords, pull
+secrets, RHSM credentials, private hostnames, and private workstation paths in
+ignored local files or operator-managed secret stores.
 
 ## Execution Model
 
@@ -58,7 +57,7 @@ flowchart LR
 | `/home/libvirt/images/appliance-install` | Virtualization host | Default location for OpenShift appliance artifacts and VM overlay disks. |
 
 VM work is still launched from the operator workstation. Script `06` copies the
-operator-provided RHEL cloud image into a standalone foundry QCOW2 and attaches a
+operator-provided RHEL cloud image into a dedicated foundry QCOW2 and attaches a
 NoCloud cloud-init seed ISO. Scripts that configure services inside foundry use
 SSH through the virtualization host jump path. Scripts `10` through `12`
 prepare OpenShift appliance content on foundry. Script `13` uses temporary
@@ -72,6 +71,19 @@ through the operator workstation.
 Use this first-pass flow for a new lab. Run every command from the repository
 root on the operator workstation:
 
+```bash
+cp config/host.env.example config/host.env
+cp config/rhsm.env.example config/rhsm.env
+cp config/network.env.example config/network.env
+cp config/foundry.env.example config/foundry.env
+cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
+```
+
+Edit those ignored local files for the target environment before running any
+setup script.
+
 | Phase | Scripts | What to watch for |
 | --- | --- | --- |
 | Local config | Copy `config/*.env.example` to ignored `config/*.env` files | Keep real pull secrets, activation keys, passwords, private hostnames, and private file locations out of tracked files. |
@@ -81,6 +93,55 @@ root on the operator workstation:
 | VM boot | `13` | The first run copies `appliance.raw`, converts it to `appliance-base.qcow2`, and creates node overlays. Later runs reuse `appliance-base.qcow2` by default when `APPLIANCE_REFRESH_BASE_IMAGE=false`. |
 | Install watch | `15` | The installer wait commands run with sudo and can sit with little output while the nodes boot, form the cluster, and settle operators. |
 | Cluster verification | `16` | The script creates a temporary local API tunnel through the virtualization host, uses a temporary kubeconfig copy, runs sanitized `oc` checks, then cleans up. |
+
+First build:
+
+```bash
+./scripts/01-register-rhn.sh
+./scripts/02-install-host-packages.sh
+# wait for the virtualization host to reboot
+./scripts/03-enable-host-services.sh
+./scripts/04-configure-ovs-networks.sh
+./scripts/05-verify-virt-host.sh
+./scripts/06-create-foundry-vm.sh
+./scripts/07-configure-foundry-console.sh
+./scripts/08-configure-foundry-services.sh
+./scripts/09-verify-foundry-services.sh
+./scripts/10-prepare-appliance-assets.sh
+./scripts/11-build-appliance-image.sh
+./scripts/12-create-cluster-config-image.sh
+./scripts/13-create-ocp-vms.sh
+./scripts/15-watch-ocp-install.sh
+./scripts/16-verify-ocp-cluster.sh
+```
+
+Script `14` is part of the numbered workflow but is reserved for reimage
+cleanup. Do not run it between first VM creation and install watch.
+
+Quick reimage path:
+
+```bash
+# Optional when cluster config, NTP, networking, nodes, or pull-secret inputs changed:
+./scripts/10-prepare-appliance-assets.sh
+./scripts/12-create-cluster-config-image.sh
+
+./scripts/14-destroy-ocp-vms.sh
+./scripts/13-create-ocp-vms.sh
+./scripts/15-watch-ocp-install.sh
+./scripts/16-verify-ocp-cluster.sh
+```
+
+The reimage path refreshes only the config ISO and node overlays unless
+`APPLIANCE_REFRESH_BASE_IMAGE=true` is set. With the default
+`APPLIANCE_REFRESH_BASE_IMAGE=false`, script `13` reuses the existing
+`appliance-base.qcow2` and pulls only the current config ISO from foundry.
+Script `12` regenerates installer state for the next install, including the
+foundry-local kubeconfig, so treat it as the start of a new install attempt.
+
+If `config/operators.env` or `config/additional-images.env` changes, rerun
+scripts `10` and `11`, then run script `13` with
+`APPLIANCE_REFRESH_BASE_IMAGE=true` so the VM base image is rebuilt from the new
+`appliance.raw`.
 
 The default OpenShift 4.21 appliance build includes the requested operator set.
 To customize mirrored operators, copy `config/operators.env.example` to ignored
@@ -103,6 +164,20 @@ referenced from that env file.
 | Web Terminal | `web-terminal` |
 | Quay | `quay-operator` |
 
+The default live artifact directory on the virtualization host is
+`/home/libvirt/images/appliance-install`, with files such as
+`appliance-base.qcow2`, `agentconfig.noarch.iso`, and the node overlay disks.
+Treat that path as a configurable example; use the value from ignored local
+config for the target lab.
+
+`scripts/lib/remote.sh` is not an operator step. It is a shared helper used by
+the numbered scripts to load `config/*.env` and run simple SSH commands on the
+target host.
+
+See [Execution Model](docs/execution-model.md) for more detail.
+See [Registry Auth Examples](docs/registry-auth.md) for multi-registry pull
+secret and IBM Cloud Pak content examples.
+
 ## Standalone Foundry Variant
 
 Use `scripts/foundry-standalone/` when an existing RHEL 10.x server should only
@@ -113,6 +188,11 @@ or OpenShift VM deployment.
 
 ```bash
 cp config/foundry-standalone.env.example config/foundry-standalone.env
+cp config/rhsm.env.example config/rhsm.env
+cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
+
 ./scripts/foundry-standalone/01-register-rhn.sh
 ./scripts/foundry-standalone/02-install-packages.sh
 ./scripts/foundry-standalone/03-verify-host.sh
@@ -121,90 +201,6 @@ cp config/foundry-standalone.env.example config/foundry-standalone.env
 ```
 
 See [Standalone Foundry](docs/foundry-standalone.md) for that build-only path.
-
-Before running host setup, create local config files from the examples:
-
-```bash
-cp config/host.env.example config/host.env
-cp config/rhsm.env.example config/rhsm.env
-cp config/network.env.example config/network.env
-cp config/foundry.env.example config/foundry.env
-cp config/appliance.env.example config/appliance.env
-cp config/operators.env.example config/operators.env
-cp config/additional-images.env.example config/additional-images.env
-```
-
-Edit those local files for the target environment. They are ignored by git.
-Keep real pull secrets, activation keys, passwords, and private host values only
-in ignored local files or operator-managed secret stores.
-
-First build golden path:
-
-```bash
-./scripts/01-register-rhn.sh
-./scripts/02-install-host-packages.sh
-# wait for the virtualization host to reboot
-./scripts/03-enable-host-services.sh
-./scripts/04-configure-ovs-networks.sh
-./scripts/05-verify-virt-host.sh
-./scripts/06-create-foundry-vm.sh
-./scripts/07-configure-foundry-console.sh
-./scripts/08-configure-foundry-services.sh
-./scripts/09-verify-foundry-services.sh
-./scripts/10-prepare-appliance-assets.sh
-./scripts/11-build-appliance-image.sh
-./scripts/12-create-cluster-config-image.sh
-./scripts/13-create-ocp-vms.sh
-./scripts/15-watch-ocp-install.sh
-./scripts/16-verify-ocp-cluster.sh
-```
-
-Script `14` is part of the numbered 01-through-16 workflow but is reserved for
-reimage cleanup. Do not run it between first VM creation and install watch.
-
-Quick reimage path:
-
-```bash
-# Optional when cluster config, NTP, networking, nodes, or pull-secret inputs changed:
-./scripts/10-prepare-appliance-assets.sh
-./scripts/12-create-cluster-config-image.sh
-
-./scripts/14-destroy-ocp-vms.sh
-./scripts/13-create-ocp-vms.sh
-./scripts/15-watch-ocp-install.sh
-./scripts/16-verify-ocp-cluster.sh
-```
-
-The reimage path refreshes only the config ISO and node overlays unless
-`APPLIANCE_REFRESH_BASE_IMAGE=true` is set. With the default
-`APPLIANCE_REFRESH_BASE_IMAGE=false`, script `13` reuses the existing
-`appliance-base.qcow2` and pulls only the current config ISO from foundry.
-Script `12` regenerates installer state for the next install, including the
-foundry-local kubeconfig, so treat it as the start of a new install attempt.
-If `config/operators.env` or `config/additional-images.env` changes, rerun
-scripts `10` and `11`, then run script `13` with
-`APPLIANCE_REFRESH_BASE_IMAGE=true` so the VM base image is rebuilt from the new
-`appliance.raw`.
-
-The default live artifact directory on the virtualization host is
-`/home/libvirt/images/appliance-install`, with files such as
-`appliance-base.qcow2`, `agentconfig.noarch.iso`, and the node overlay disks.
-Treat that path as a configurable example; use the value from ignored local
-config for the target lab.
-
-The latest live verification succeeded with all three nodes `Ready`,
-ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
-unhealthy cluster operators, and configured mirrored packages available through
-PackageManifest. Do not add kubeadmin passwords or kubeconfig contents to
-tracked docs.
-
-`scripts/lib/remote.sh` is not an operator step. It is a shared helper used by
-the numbered scripts to load `config/*.env` and run simple SSH commands on the
-target host.
-
-See [Execution Model](docs/execution-model.md) for more detail. See
-[Registry Auth Examples](docs/registry-auth.md) for multi-registry pull secret
-and IBM Cloud Pak content examples.
 
 ## Folder Tree
 

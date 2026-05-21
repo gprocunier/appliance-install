@@ -5,6 +5,10 @@ operator. The scripts prepare a RHEL virtualization host with libvirt, Open
 vSwitch, Cockpit, a dual-homed foundry VM, and a three-node OpenShift 4.21
 Appliance demo lab.
 
+This runbook covers the full virtualized lab path. If the target is only an
+existing RHEL 10.x host that should mirror content and produce `appliance.raw`,
+use `docs/foundry-standalone.md` instead.
+
 Run the numbered scripts from the repository root on the operator workstation.
 The scripts load ignored local config from `config/*.env`, then use SSH to make
 changes on the configured virtualization host. Foundry service scripts reach the
@@ -582,7 +586,7 @@ This script creates the foundry VM on the virtualization host. It validates
 foundry and network config, checks that the upstream and appliance libvirt
 networks exist, checks that the operator-provided RHEL cloud image exists on the
 virtualization host, refuses to overwrite an existing foundry VM or disk, copies
-the base image into a standalone foundry QCOW2, resizes it, creates a NoCloud
+the base image into a dedicated foundry QCOW2, resizes it, creates a NoCloud
 cloud-init seed ISO, then starts the VM with one upstream NIC and one appliance
 network NIC.
 
@@ -1110,9 +1114,7 @@ sudo -n firewall-cmd --list-all
 ## OpenShift Appliance Defaults
 
 Scripts `10` through `16` prepare, install, and verify the OpenShift 4.21
-appliance cluster. The latest validated run completed successfully with
-OpenShift 4.21.15 from the 4.21 appliance build. The tracked defaults are
-sanitized and partner-facing:
+appliance cluster. The tracked defaults are sanitized and partner-facing:
 
 | Setting | Default |
 | --- | --- |
@@ -1448,12 +1450,6 @@ The script prints:
 - cluster operators that are still progressing or degraded
 - console route URL
 - configured PackageManifest availability for mirrored operator packages
-
-The latest live verification succeeded with all three nodes `Ready`,
-ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
-unhealthy cluster operators, and configured PackageManifest entries available.
-Do not paste kubeadmin passwords, kubeconfig contents, or other secrets into
-tracked documentation.
 
 Expected quiet or long phases:
 

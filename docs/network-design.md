@@ -3,6 +3,10 @@
 The appliance demo uses Open vSwitch as the lab switch. The OpenShift VMs live
 only on networks that exist on that OVS switch.
 
+This page applies to the full virtualized lab path. The standalone foundry path
+is build-only and does not configure OVS, libvirt networks, DNS/NTP serving, or
+OpenShift deployment VMs.
+
 This gives the demo a clean disconnection story:
 
 - the OpenShift nodes do not have a management or internet-facing NIC

@@ -178,11 +178,6 @@ the output those tools produce.
 | `15-watch-ocp-install.sh` | Bootstrap and install wait commands. | `openshift-install` reports bootstrap and install completion. |
 | `16-verify-ocp-cluster.sh` | Temporary API tunnel setup and `oc` checks. | Nodes, clusterversion, unhealthy operators, console URL, and configured PackageManifest availability are printed. |
 
-The latest live verification succeeded with all three nodes `Ready`,
-ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
-unhealthy cluster operators, and configured PackageManifest entries available.
-Do not copy kubeadmin passwords or kubeconfig contents into tracked docs.
-
 ## What remote.sh Does
 
 `scripts/lib/remote.sh` is shared helper code. It is sourced by the numbered

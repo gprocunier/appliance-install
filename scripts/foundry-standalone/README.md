@@ -8,6 +8,8 @@ Use this path when the target host already has flat networking with internet
 access through its normal default gateway and only needs to mirror content and
 produce `appliance.raw`.
 
+See `docs/foundry-standalone.md` for the full operator explanation.
+
 ## Local Config
 
 Create ignored local config from tracked examples:

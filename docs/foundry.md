@@ -19,6 +19,10 @@ Foundry also owns the OpenShift appliance build workspace. Scripts `10` through
 `agentconfig.noarch.iso` config image on foundry before script `13` pulls those
 artifacts directly to the virtualization host.
 
+This page covers the foundry VM used by the full virtualized lab. For the
+build-only path on an existing RHEL 10.x host, see
+[Standalone Foundry](foundry-standalone.md).
+
 ## Local Config
 
 Create local foundry config from the tracked example:
@@ -103,7 +107,7 @@ Run these from the repository root on the operator workstation:
 `06-create-foundry-vm.sh` creates the VM on the virtualization host.
 
 It does not attach the staged RHEL cloud image directly. It copies that image to
-a standalone foundry QCOW2, resizes the copy, then boots it with a NoCloud
+a dedicated foundry QCOW2, resizes the copy, then boots it with a NoCloud
 cloud-init seed ISO for hostname, SSH key, and network configuration.
 
 The VM uses VNC graphics bound to `127.0.0.1` on the virtualization host. That
@@ -235,8 +239,8 @@ The appliance image requires at least 150 GiB, so the published defaults use
 200 GiB for both the appliance image and each OpenShift VM overlay disk. Script
 `13` places the OpenShift appliance base image, config ISO, and VM overlays
 under `/home/libvirt/images/appliance-install` on the virtualization host by
-default. In the latest live run that directory contained
-`appliance-base.qcow2`, `agentconfig.noarch.iso`, and node overlays. Treat that
-path as a configurable example, not a hard requirement.
+default. A completed run should leave `appliance-base.qcow2`,
+`agentconfig.noarch.iso`, and node overlays in that directory. Treat that path
+as a configurable example, not a hard requirement.
 
 Change these in ignored local config if the lab addressing or VM sizing changes.
