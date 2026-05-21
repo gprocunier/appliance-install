@@ -310,6 +310,111 @@ load_appliance_config() {
     source "${root_dir}/config/appliance.env"
 }
 
+load_operator_config() {
+    local root_dir
+    local operator_declare
+
+    root_dir="$(repo_root)"
+
+    if [[ -f "${root_dir}/config/operators.env" ]]; then
+        # shellcheck disable=SC1091
+        source "${root_dir}/config/operators.env"
+    elif [[ -f "${root_dir}/config/operators.env.example" ]]; then
+        # shellcheck disable=SC1091
+        source "${root_dir}/config/operators.env.example"
+    else
+        echo "Missing config/operators.env"
+        echo "Copy config/operators.env.example to config/operators.env and adjust it."
+        exit 1
+    fi
+
+    APPLIANCE_OPERATOR_CATALOG="${APPLIANCE_OPERATOR_CATALOG:-registry.redhat.io/redhat/redhat-operator-index:v${APPLIANCE_OCP_VERSION:-4.21}}"
+
+    if ! operator_declare="$(declare -p APPLIANCE_OPERATOR_PACKAGES 2>/dev/null)"; then
+        fail "APPLIANCE_OPERATOR_PACKAGES must be defined in config/operators.env."
+    fi
+
+    if [[ "${operator_declare}" != declare\ -a* && "${operator_declare}" != declare\ -ax* ]]; then
+        fail "APPLIANCE_OPERATOR_PACKAGES must be a bash array in config/operators.env."
+    fi
+}
+
+normalize_operator_entry() {
+    local entry
+    local first
+    local second
+    local third
+    local extra
+    local catalog
+    local package
+    local channel
+
+    entry="$1"
+
+    IFS='|' read -r first second third extra <<< "${entry}"
+
+    if [[ -n "${extra:-}" ]]; then
+        fail "Operator entry has too many fields: ${entry}"
+    fi
+
+    if [[ -n "${third:-}" ]]; then
+        catalog="${first}"
+        package="${second}"
+        channel="${third}"
+    else
+        catalog="${APPLIANCE_OPERATOR_CATALOG}"
+        package="${first}"
+        channel="${second}"
+    fi
+
+    validate_non_empty "operator catalog" "${catalog}"
+    validate_non_empty "operator package" "${package}"
+    validate_non_empty "operator channel" "${channel}"
+
+    if [[ ! "${catalog}" =~ ^[A-Za-z0-9._/:@-]+$ ]]; then
+        fail "Operator catalog contains unsupported characters: ${catalog}"
+    fi
+
+    if [[ ! "${package}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        fail "Operator package contains unsupported characters: ${package}"
+    fi
+
+    if [[ ! "${channel}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        fail "Operator channel contains unsupported characters: ${channel}"
+    fi
+
+    printf '%s|%s|%s\n' "${catalog}" "${package}" "${channel}"
+}
+
+operator_packages_payload() {
+    local entry
+    local count
+
+    count=0
+
+    for entry in "${APPLIANCE_OPERATOR_PACKAGES[@]}"; do
+        normalize_operator_entry "${entry}"
+        count=$((count + 1))
+    done
+
+    if (( count == 0 )); then
+        fail "APPLIANCE_OPERATOR_PACKAGES must contain at least one operator entry."
+    fi
+}
+
+operator_package_names() {
+    local entry
+    local normalized
+    local package
+
+    for entry in "${APPLIANCE_OPERATOR_PACKAGES[@]}"; do
+        normalized="$(normalize_operator_entry "${entry}")"
+        package="${normalized#*|}"
+        package="${package%%|*}"
+        printf '%s\n' "${package}"
+    done
+}
+
 remote_target() {
     printf '%s@%s\n' "${APPLIANCE_HOST_USER}" "${APPLIANCE_HOST}"
 }

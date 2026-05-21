@@ -20,6 +20,7 @@ APPLIANCE_VERIFY_LOCAL_PORT="${APPLIANCE_VERIFY_LOCAL_PORT:-16443}"
 APPLIANCE_CLUSTER_CONFIG_DIR="${APPLIANCE_CLUSTER_CONFIG_DIR:-/srv/appliance/cluster-config}"
 APPLIANCE_CLUSTER_NAME="${APPLIANCE_CLUSTER_NAME:-appliance}"
 APPLIANCE_BASE_DOMAIN="${APPLIANCE_BASE_DOMAIN:-workshop.lan}"
+load_operator_config
 
 #### These steps validate local verification requirements
 
@@ -139,20 +140,12 @@ KUBECONFIG="${KUBECONFIG_TEMP}" oc --insecure-skip-tls-verify=true \
     -o jsonpath='https://{.spec.host}{"\n"}'
 
 echo
-echo "Selected mirrored operator packages:"
-for package in \
-    kubevirt-hyperconverged \
-    kubernetes-nmstate-operator \
-    openshift-cert-manager-operator \
-    netobserv-operator \
-    web-terminal \
-    quay-operator \
-    odf-operator
-do
+echo "Configured mirrored operator packages:"
+while IFS= read -r package; do
     if KUBECONFIG="${KUBECONFIG_TEMP}" oc --insecure-skip-tls-verify=true \
         -n openshift-marketplace get packagemanifest "${package}" >/dev/null 2>&1; then
         echo "${package}: available"
     else
         echo "${package}: not reported by PackageManifest yet"
     fi
-done
+done < <(operator_package_names)

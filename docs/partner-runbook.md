@@ -42,6 +42,7 @@ cp config/rhsm.env.example config/rhsm.env
 cp config/network.env.example config/network.env
 cp config/foundry.env.example config/foundry.env
 cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
 
 #### Edit the ignored files for the target lab
 
@@ -50,6 +51,7 @@ vi config/rhsm.env
 vi config/network.env
 vi config/foundry.env
 vi config/appliance.env
+vi config/operators.env
 ```
 
 Important local values:
@@ -67,6 +69,8 @@ Important local values:
   secret file placeholder, core console password placeholder, cluster identity,
   foundry build directories, and the OpenShift VM disk directory on the
   virtualization host.
+- `config/operators.env`: operator catalog image, package names, and channels
+  mirrored into `appliance.raw`.
 
 Keep real pull-secret content, activation keys, passwords, private hostnames,
 and private file locations out of tracked files. Use the tracked examples as
@@ -113,6 +117,8 @@ Use `./scripts/14-destroy-ocp-vms.sh` only when the three OpenShift VMs need to
 be removed and reimaged before rerunning script `13`. With the default
 `APPLIANCE_REFRESH_BASE_IMAGE=false`, script `13` reuses the existing
 `appliance-base.qcow2` and refreshes only the config ISO and node overlays.
+If `config/operators.env` changes, rerun scripts `10` and `11`, then run script
+`13` with `APPLIANCE_REFRESH_BASE_IMAGE=true` to replace the VM base image.
 
 ## Script 01: Register The Virtualization Host
 
@@ -1122,7 +1128,10 @@ libvirt image pool. The live lab currently uses
 `agentconfig.noarch.iso`, and node overlay disks there. Treat that path as a
 configurable example, not a hard requirement.
 
-The generated appliance image includes these operator packages:
+The default generated appliance image includes these operator packages from
+`config/operators.env.example`. The ignored `config/operators.env` file can add,
+remove, or change packages and channels before script `10` writes
+`appliance-config.yaml`.
 
 | Package | Channel |
 | --- | --- |
@@ -1153,9 +1162,10 @@ Run from the operator workstation after foundry services verify successfully:
 ```
 
 This script loads `config/host.env`, `config/network.env`,
-`config/foundry.env`, and `config/appliance.env`. It validates the appliance
-image size, node disk sizes, cluster DNS identity, node MAC addresses, pull
-secret file, and core SSH public key before making changes.
+`config/foundry.env`, `config/appliance.env`, and `config/operators.env`. It
+validates the appliance image size, node disk sizes, cluster DNS identity, node
+MAC addresses, pull secret file, core SSH public key, and operator package list
+before making changes.
 
 Then it copies the configured local pull secret to foundry-local secret
 locations and writes generated OpenShift appliance input files on foundry:
@@ -1165,6 +1175,11 @@ locations and writes generated OpenShift appliance input files on foundry:
 | `appliance-config.yaml` | OpenShift appliance image build input, including pull-secret content and operator package list. |
 | `install-config.yaml` | Agent Installer cluster identity, networking, API VIP, ingress VIP, and SSH key input. |
 | `agent-config.yaml` | Static host networking, rendezvous settings, and `additionalNTPSources` for `ocp-01`, `ocp-02`, and `ocp-03`. |
+
+The operator list in `appliance-config.yaml` is written from
+`APPLIANCE_OPERATOR_PACKAGES`. Each entry can use `package|channel` to use the
+default catalog, or `catalog-image|package|channel` for a package from a
+different catalog image.
 
 `additionalNTPSources` is written from `APPLIANCE_AGENT_NTP_SOURCE`, which
 defaults to foundry/IdM on the appliance network. This matters in the
@@ -1183,11 +1198,15 @@ Troubleshooting checkpoints:
 
 - If the script says `Missing config/appliance.env`, copy
   `config/appliance.env.example` to `config/appliance.env`.
+- If the script says `Missing config/operators.env`, copy
+  `config/operators.env.example` to `config/operators.env`.
 - `APPLIANCE_CORE_PASSWORD` must be changed from the placeholder.
 - The configured pull secret file and core public key file must exist on the
   operator workstation.
 - Each OpenShift node disk must be at least as large as
   `APPLIANCE_IMAGE_DISK_SIZE_GB`.
+- Operator package entries must use `package|channel` or
+  `catalog-image|package|channel`.
 
 ## Script 11: Build The Appliance Image
 
@@ -1373,11 +1392,11 @@ The script prints:
 - ClusterVersion status
 - cluster operators that are still progressing or degraded
 - console route URL
-- selected PackageManifest availability for mirrored operator packages
+- configured PackageManifest availability for mirrored operator packages
 
 The latest live verification succeeded with all three nodes `Ready`,
 ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
-unhealthy cluster operators, and selected PackageManifest entries available.
+unhealthy cluster operators, and configured PackageManifest entries available.
 Do not paste kubeadmin passwords, kubeconfig contents, or other secrets into
 tracked documentation.
 
@@ -1416,7 +1435,7 @@ Troubleshooting checkpoints:
   `/etc/ipa/default.conf` already exists, then manages records and services.
 - `09-verify-foundry-services.sh` is read-only.
 - `10-prepare-appliance-assets.sh` overwrites generated appliance and cluster
-  YAML on foundry. Re-run it after changing appliance config.
+  YAML on foundry. Re-run it after changing appliance or operator config.
 - `11-build-appliance-image.sh` rebuilds `appliance.raw`. Set
   `APPLIANCE_CLEAN_BEFORE_BUILD="true"` in ignored local config only when old
   temporary build output should be cleaned first.
@@ -1425,7 +1444,8 @@ Troubleshooting checkpoints:
   install attempt.
 - `13-create-ocp-vms.sh` refuses to overwrite existing OpenShift VM domains. Run
   script `14` before reimaging. It reuses `appliance-base.qcow2` by default
-  when `APPLIANCE_REFRESH_BASE_IMAGE=false`.
+  when `APPLIANCE_REFRESH_BASE_IMAGE=false`; set
+  `APPLIANCE_REFRESH_BASE_IMAGE=true` after rebuilding `appliance.raw`.
 - `14-destroy-ocp-vms.sh` removes the OpenShift VM domains and overlay disks.
   It is a deliberate reimage step.
 - `15-watch-ocp-install.sh` is read-only from the VM perspective; it waits for
@@ -1447,6 +1467,7 @@ ls config/rhsm.env
 ls config/network.env
 ls config/foundry.env
 ls config/appliance.env
+ls config/operators.env
 
 #### Confirm SSH to the virtualization host
 

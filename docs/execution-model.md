@@ -60,6 +60,7 @@ cp config/foundry.env.example config/foundry.env
 cp config/rhsm.env.example config/rhsm.env
 cp config/network.env.example config/network.env
 cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
 ```
 
 `config/host.env` describes how the operator workstation reaches the
@@ -90,6 +91,11 @@ and appliance-builder workspace defaults.
 settings, local pull secret path, core console password placeholder, cluster
 identity, and OpenShift VM disk location. Keep real pull-secret content and
 password values out of tracked files.
+
+`config/operators.env` describes the operator catalog image, package names, and
+channels mirrored into `appliance.raw`. The tracked example contains the default
+workshop set. Edit the ignored local file before script `10` to add, remove, or
+change operator packages.
 
 All real `config/*.env` files are ignored by git. The tracked
 `config/*.env.example` files are sanitized templates.
@@ -139,6 +145,11 @@ path refreshes only the config ISO and per-node overlays. Script `12`
 regenerates installer state for the next install, including the foundry-local
 kubeconfig used by scripts `15` and `16`.
 
+Changing `config/operators.env` changes the content baked into
+`appliance.raw`, not just the config ISO. After changing operators, rerun
+scripts `10` and `11`, then refresh the host base image during script `13` with
+`APPLIANCE_REFRESH_BASE_IMAGE=true`.
+
 ## Long-Running Phases
 
 Some scripts intentionally hand off work to remote systems and then stream only
@@ -152,11 +163,11 @@ the output those tools produce.
 | `11-build-appliance-image.sh` | Appliance builder pull and OpenShift 4.21 content mirroring. | `qemu-img info`, `ls -lh`, and the appliance image completion message appear for `appliance.raw`. |
 | `13-create-ocp-vms.sh` | Direct sparse transfer from foundry to the virtualization host and raw-to-QCOW2 conversion when the base image is refreshed. | `virsh list --all` shows the OpenShift VM domains. |
 | `15-watch-ocp-install.sh` | Bootstrap and install wait commands. | `openshift-install` reports bootstrap and install completion. |
-| `16-verify-ocp-cluster.sh` | Temporary API tunnel setup and `oc` checks. | Nodes, clusterversion, unhealthy operators, console URL, and selected PackageManifest availability are printed. |
+| `16-verify-ocp-cluster.sh` | Temporary API tunnel setup and `oc` checks. | Nodes, clusterversion, unhealthy operators, console URL, and configured PackageManifest availability are printed. |
 
 The latest live verification succeeded with all three nodes `Ready`,
 ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
-unhealthy cluster operators, and selected PackageManifest entries available.
+unhealthy cluster operators, and configured PackageManifest entries available.
 Do not copy kubeadmin passwords or kubeconfig contents into tracked docs.
 
 ## What remote.sh Does
@@ -171,6 +182,8 @@ It provides small helper functions:
 - `load_network_config`: loads `config/network.env`
 - `load_foundry_config`: loads `config/foundry.env`
 - `load_appliance_config`: loads `config/appliance.env`
+- `load_operator_config`: loads `config/operators.env`, or the tracked example
+  when the ignored local file does not exist
 - `run_remote`: runs one command over SSH
 - `run_remote_bash`: runs a readable multi-line bash block over SSH
 - `run_foundry`: runs one command on foundry through the virtualization host

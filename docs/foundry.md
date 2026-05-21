@@ -26,6 +26,7 @@ Create local foundry config from the tracked example:
 ```bash
 cp config/foundry.env.example config/foundry.env
 cp config/appliance.env.example config/appliance.env
+cp config/operators.env.example config/operators.env
 ```
 
 Edit both ignored files for the target lab. The real files are ignored by git.
@@ -67,6 +68,11 @@ as a general internet resolver.
 The tracked `config/appliance.env.example` keeps the OpenShift appliance
 defaults sanitized. Do not commit real pull-secret content, real passwords, or
 private lab hostnames.
+
+The tracked `config/operators.env.example` keeps the default mirrored operator
+set publishable. Copy it to ignored `config/operators.env` and edit that local
+file when the target workshop needs a different catalog, package, or channel
+list.
 
 ## Run Order
 
@@ -110,10 +116,12 @@ host and configures:
 NTP, and web staging endpoints respond.
 
 `10-prepare-appliance-assets.sh` copies the real pull secret into foundry-local
-ignored paths and writes generated `appliance-config.yaml`, `install-config.yaml`,
-and `agent-config.yaml` under `/srv/appliance`. Those generated files may contain
-secret or environment-specific values and should not be copied into tracked
-documentation.
+ignored paths and writes generated `appliance-config.yaml`,
+`install-config.yaml`, and `agent-config.yaml` under `/srv/appliance`. It reads
+the operator package list from ignored `config/operators.env`, falling back to
+the tracked example when the local file does not exist. Those generated files
+may contain secret or environment-specific values and should not be copied into
+tracked documentation.
 
 `11-build-appliance-image.sh` runs the OpenShift appliance builder container on
 foundry. This can be a long, quiet phase while OpenShift 4.21 release content
@@ -139,7 +147,7 @@ contains real pull-secret content, so keep it on foundry and out of tracked
 documentation.
 
 The tracked build path targets OpenShift 4.21 and includes these requested
-operator capabilities:
+operator capabilities by default:
 
 | Capability | Package entries |
 | --- | --- |
@@ -150,6 +158,12 @@ operator capabilities:
 | Network Observability | `netobserv-operator` |
 | Web Terminal | `web-terminal` |
 | Quay | `quay-operator` |
+
+Changing the operator set changes `appliance.raw`, not only the Agent Installer
+config ISO. After editing `config/operators.env`, rerun scripts `10` and `11`.
+When redeploying the VMs, run script `13` with
+`APPLIANCE_REFRESH_BASE_IMAGE=true` so the virtualization host replaces
+`appliance-base.qcow2` with the rebuilt image.
 
 ## Rebuild Foundry
 

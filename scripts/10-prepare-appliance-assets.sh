@@ -44,6 +44,9 @@ APPLIANCE_NODE_3_DISK_SIZE_GB="${APPLIANCE_NODE_3_DISK_SIZE_GB:-200}"
 APPLIANCE_MACHINE_GATEWAY_IP="${APPLIANCE_MACHINE_GATEWAY_CIDR%/*}"
 APPLIANCE_MACHINE_PREFIX="${APPLIANCE_MACHINE_GATEWAY_CIDR#*/}"
 
+load_operator_config
+APPLIANCE_OPERATOR_PACKAGES_PAYLOAD="$(operator_packages_payload)"
+
 #### These steps validate appliance build settings before making changes
 
 # The appliance disk image requires at least 150 GiB.
@@ -82,6 +85,7 @@ validate_non_empty "APPLIANCE_AGENT_NTP_SOURCE" "${APPLIANCE_AGENT_NTP_SOURCE}"
 validate_mac "APPLIANCE_NODE_1_MAC" "${APPLIANCE_NODE_1_MAC}"
 validate_mac "APPLIANCE_NODE_2_MAC" "${APPLIANCE_NODE_2_MAC}"
 validate_mac "APPLIANCE_NODE_3_MAC" "${APPLIANCE_NODE_3_MAC}"
+validate_non_empty "APPLIANCE_OPERATOR_PACKAGES_PAYLOAD" "${APPLIANCE_OPERATOR_PACKAGES_PAYLOAD}"
 
 if [[ "${APPLIANCE_CORE_PASSWORD}" == replace-with-* ]]; then
     fail "APPLIANCE_CORE_PASSWORD must be changed in config/appliance.env."
@@ -145,6 +149,7 @@ printf -v NODE_2_MAC_REMOTE '%q' "${APPLIANCE_NODE_2_MAC}"
 printf -v NODE_3_NAME_REMOTE '%q' "${APPLIANCE_NODE_3_NAME}"
 printf -v NODE_3_IP_REMOTE '%q' "${APPLIANCE_NODE_3_IP}"
 printf -v NODE_3_MAC_REMOTE '%q' "${APPLIANCE_NODE_3_MAC}"
+printf -v OPERATOR_PACKAGES_REMOTE '%q' "${APPLIANCE_OPERATOR_PACKAGES_PAYLOAD}"
 
 run_foundry sudo -n /bin/bash -s <<REMOTE_SCRIPT
 set -euo pipefail
@@ -179,6 +184,7 @@ NODE_2_MAC=${NODE_2_MAC_REMOTE}
 NODE_3_NAME=${NODE_3_NAME_REMOTE}
 NODE_3_IP=${NODE_3_IP_REMOTE}
 NODE_3_MAC=${NODE_3_MAC_REMOTE}
+OPERATOR_PACKAGES=${OPERATOR_PACKAGES_REMOTE}
 PULL_SECRET_PATH=/home/appliance/.config/containers/auth.json
 
 #### These steps create the asset and cluster config directories
@@ -197,35 +203,21 @@ chmod 0600 /srv/appliance/secrets/pull-secret.txt
 # The appliance config includes real pull-secret content and is not tracked.
 echo "Writing \${ASSETS_DIR}/appliance-config.yaml."
 export OCP_VERSION OCP_CHANNEL OCP_ARCH IMAGE_DISK_SIZE_GB BUILDER_IMAGE
-export ASSETS_DIR CORE_PASSWORD CORE_SSH_KEY PULL_SECRET_PATH
+export ASSETS_DIR CORE_PASSWORD CORE_SSH_KEY PULL_SECRET_PATH OPERATOR_PACKAGES
 python3 - <<'PY'
 import os
 from pathlib import Path
+from collections import OrderedDict
 
 def squote(value):
     return "'" + value.replace("'", "''") + "'"
 
 pull_secret = Path(os.environ["PULL_SECRET_PATH"]).read_text().strip()
+operator_catalogs = OrderedDict()
 
-operator_packages = [
-    ("kubevirt-hyperconverged", "stable"),
-    ("kubernetes-nmstate-operator", "stable"),
-    ("openshift-cert-manager-operator", "stable-v1"),
-    ("netobserv-operator", "stable"),
-    ("web-terminal", "fast"),
-    ("quay-operator", "stable-3.16"),
-    ("odf-operator", "stable-4.21"),
-    ("ocs-operator", "stable-4.21"),
-    ("mcg-operator", "stable-4.21"),
-    ("odf-csi-addons-operator", "stable-4.21"),
-    ("odf-dependencies", "stable-4.21"),
-    ("odf-external-snapshotter-operator", "stable-4.21"),
-    ("odf-prometheus-operator", "stable-4.21"),
-    ("ocs-client-operator", "stable-4.21"),
-    ("recipe", "stable-4.21"),
-    ("rook-ceph-operator", "stable-4.21"),
-    ("cephcsi-operator", "stable-4.21"),
-]
+for line in os.environ["OPERATOR_PACKAGES"].splitlines():
+    catalog, package, channel = line.split("|", 2)
+    operator_catalogs.setdefault(catalog, []).append((package, channel))
 
 lines = [
     "apiVersion: v1beta1",
@@ -248,16 +240,19 @@ lines = [
     "useDefaultSourceNames: true",
     "disableSigstoreForAdditionalImages: true",
     "operators:",
-    "- catalog: registry.redhat.io/redhat/redhat-operator-index:v4.21",
-    "  packages:",
 ]
 
-for name, channel in operator_packages:
+for catalog, packages in operator_catalogs.items():
     lines.extend([
-        f"  - name: {name}",
-        "    channels:",
-        f"    - name: {channel}",
+        f"- catalog: {catalog}",
+        "  packages:",
     ])
+    for name, channel in packages:
+        lines.extend([
+            f"  - name: {name}",
+            "    channels:",
+            f"    - name: {channel}",
+        ])
 
 Path(os.environ["ASSETS_DIR"], "appliance-config.yaml").write_text("\n".join(lines) + "\n")
 PY
