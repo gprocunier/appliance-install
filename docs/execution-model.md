@@ -3,6 +3,10 @@
 This repository is run from an operator workstation against a remote
 virtualization host.
 
+This page describes the full virtualized lab path. For the build-only path that
+uses an existing RHEL 10.x host as a standalone appliance image builder, see
+[Standalone Foundry](foundry-standalone.md).
+
 The operator does not run most setup commands by hand on the host. Instead, the
 operator runs numbered scripts from the repository root. Those scripts load
 local configuration and use SSH to make the requested change on the target host.

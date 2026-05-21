@@ -11,6 +11,11 @@ the virtualization host as an SSH jump path.
 `scripts/lib/remote.sh` is shared helper code, not a script to run directly.
 See `docs/execution-model.md` for the full execution model.
 
+For an existing RHEL 10.x host that should only mirror content and produce
+`appliance.raw`, use `scripts/foundry-standalone/` instead of the main
+virtualized lab flow. That path does not configure OVS, libvirt, IdM, DNS, NTP,
+HTTP staging, Cockpit, or OpenShift deployment VMs.
+
 First build golden path:
 
 ```bash

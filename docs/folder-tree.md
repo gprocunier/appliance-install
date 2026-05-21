@@ -12,6 +12,7 @@ configuration and written notes.
 | `docs/*.md` | Operator notes and partner-facing runbooks. |
 | `scripts/01-*.sh` through `scripts/09-*.sh` | Virtualization host and foundry preparation phases. |
 | `scripts/10-*.sh` through `scripts/16-*.sh` | OpenShift appliance asset, VM, reimage, install-watch, and cluster-verification phases. |
+| `scripts/foundry-standalone/` | Alternate build-only path for an existing RHEL 10.x host with flat internet access. |
 | `scripts/README.md` | Script-specific operator notes. |
 | `scripts/lib/remote.sh` | Shared SSH and config-loading helpers for numbered scripts. |
 
@@ -29,6 +30,10 @@ real `config/network.env` file is ignored by git.
 
 `config/foundry.env.example` documents the foundry VM, DNS records, NTP network,
 and staging directories. The real `config/foundry.env` file is ignored by git.
+
+`config/foundry-standalone.env.example` documents SSH access and local output
+defaults for the build-only standalone foundry path. The real
+`config/foundry-standalone.env` file is ignored by git.
 
 `config/appliance.env.example` documents the OpenShift 4.21 appliance build,
 cluster identity, local pull-secret path placeholder, and OpenShift VM disk
@@ -74,6 +79,7 @@ and customer-demo assumptions.
 - `execution-model.md` explains where scripts run and how they reach the
   virtualization host.
 - `foundry.md` explains the foundry VM role and service setup.
+- `foundry-standalone.md` explains the existing-host build-only foundry path.
 - `folder-tree.md` explains the repository layout.
 - `network-design.md` explains the OVS-only disconnected appliance network.
 - `partner-runbook.md` gives a novice-friendly runbook for the full flow.

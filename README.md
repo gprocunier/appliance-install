@@ -103,6 +103,25 @@ referenced from that env file.
 | Web Terminal | `web-terminal` |
 | Quay | `quay-operator` |
 
+## Standalone Foundry Variant
+
+Use `scripts/foundry-standalone/` when an existing RHEL 10.x server should only
+mirror content and produce `appliance.raw`. That path connects directly from the
+operator workstation to the standalone host and skips the virtualized lab pieces:
+no foundry VM, OVS, libvirt, IdM, DNS/NTP serving, HTTP staging, Cockpit setup,
+or OpenShift VM deployment.
+
+```bash
+cp config/foundry-standalone.env.example config/foundry-standalone.env
+./scripts/foundry-standalone/01-register-rhn.sh
+./scripts/foundry-standalone/02-install-packages.sh
+./scripts/foundry-standalone/03-verify-host.sh
+./scripts/foundry-standalone/04-prepare-appliance-assets.sh
+./scripts/foundry-standalone/05-build-appliance-image.sh
+```
+
+See [Standalone Foundry](docs/foundry-standalone.md) for that build-only path.
+
 Before running host setup, create local config files from the examples:
 
 ```bash
@@ -195,6 +214,7 @@ and IBM Cloud Pak content examples.
 | `config/rhsm.env.example` | Sanitized Red Hat registration placeholders. |
 | `config/network.env.example` | OVS and libvirt network defaults. |
 | `config/foundry.env.example` | Foundry VM, DNS, NTP, and staging defaults. |
+| `config/foundry-standalone.env.example` | Existing RHEL 10.x standalone foundry host access and output defaults. |
 | `config/appliance.env.example` | OpenShift 4.21 appliance build, cluster, and VM defaults. |
 | `config/operators.env.example` | Default operator catalog, package, and channel list for the appliance build. |
 | `config/additional-images.env.example` | Optional additional image refs for private registry or application content. |
@@ -205,6 +225,7 @@ and IBM Cloud Pak content examples.
 | `docs/` | Public operator notes and partner runbooks. |
 | `scripts/01-*.sh` through `scripts/09-*.sh` | Virtualization host and foundry preparation. |
 | `scripts/10-*.sh` through `scripts/16-*.sh` | OpenShift appliance asset build, VM creation, reimage, install watch, and cluster verification. |
+| `scripts/foundry-standalone/` | Alternate build-only path for an existing RHEL 10.x host with flat internet access. |
 | `scripts/lib/remote.sh` | Shared SSH and config-loading helper. |
 
 The tracked `config/*.example` files document required values with sanitized
