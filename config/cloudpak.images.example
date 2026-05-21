@@ -1,0 +1,8 @@
+# Copy this file to config/cloudpak.images and replace these placeholders with
+# the image list for the IBM Cloud Pak content being demonstrated.
+#
+# Blank lines and lines beginning with # are skipped.
+
+cp.icr.io/cp/example-cloudpak-service:replace-with-tag
+cp.icr.io/cp/example-cloudpak-runtime@sha256:replace-with-digest
+icr.io/cpopen/example-cloudpak-public-helper:replace-with-tag

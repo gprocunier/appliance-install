@@ -183,7 +183,9 @@ tracked docs.
 the numbered scripts to load `config/*.env` and run simple SSH commands on the
 target host.
 
-See [Execution Model](docs/execution-model.md) for more detail.
+See [Execution Model](docs/execution-model.md) for more detail. See
+[Registry Auth Examples](docs/registry-auth.md) for multi-registry pull secret
+and IBM Cloud Pak content examples.
 
 ## Folder Tree
 
@@ -196,6 +198,10 @@ See [Execution Model](docs/execution-model.md) for more detail.
 | `config/appliance.env.example` | OpenShift 4.21 appliance build, cluster, and VM defaults. |
 | `config/operators.env.example` | Default operator catalog, package, and channel list for the appliance build. |
 | `config/additional-images.env.example` | Optional additional image refs for private registry or application content. |
+| `config/pull-secret.multi-registry.json.example` | Sanitized pull-secret shape for Red Hat, IBM, Quay, and generic private registries. |
+| `config/operators.ibm-cloudpak.env.example` | Example IBM Cloud Pak operator catalog additions. |
+| `config/additional-images.ibm-cloudpak.env.example` | Example IBM Cloud Pak non-operator image additions. |
+| `config/cloudpak.images.example` | Example one-image-per-line list for larger IBM content sets. |
 | `docs/` | Public operator notes and partner runbooks. |
 | `scripts/01-*.sh` through `scripts/09-*.sh` | Virtualization host and foundry preparation. |
 | `scripts/10-*.sh` through `scripts/16-*.sh` | OpenShift appliance asset build, VM creation, reimage, install watch, and cluster verification. |

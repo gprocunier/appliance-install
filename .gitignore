@@ -1,6 +1,7 @@
 # Local operator configuration
 config/*.env
 config/*.images
+config/*pull-secret*.json
 
 # Local run output
 logs/

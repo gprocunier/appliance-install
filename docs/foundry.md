@@ -83,6 +83,9 @@ the pull secret referenced by `APPLIANCE_PULL_SECRET_FILE`. Large image lists
 can live in ignored `config/*.images` files referenced by
 `APPLIANCE_ADDITIONAL_IMAGES_FILE`.
 
+For a multi-registry pull secret and IBM Cloud Pak examples, see
+`docs/registry-auth.md`.
+
 ## Run Order
 
 Run these from the repository root on the operator workstation:

@@ -43,6 +43,13 @@ refs mirrored into the appliance image. Copy it to ignored
 `config/additional-images.env` for private registry content such as IBM Cloud
 Pak images.
 
+`config/pull-secret.multi-registry.json.example`,
+`config/operators.ibm-cloudpak.env.example`,
+`config/additional-images.ibm-cloudpak.env.example`, and
+`config/cloudpak.images.example` are sanitized examples for labs that need IBM
+Cloud Pak or other private registry content. Copy them to ignored local files
+before adding real registry credentials or image lists.
+
 ## Scripts
 
 Scripts are numbered in the order an operator should run them. Keep each script
@@ -70,3 +77,5 @@ and customer-demo assumptions.
 - `folder-tree.md` explains the repository layout.
 - `network-design.md` explains the OVS-only disconnected appliance network.
 - `partner-runbook.md` gives a novice-friendly runbook for the full flow.
+- `registry-auth.md` shows how pull-secret auth maps to Red Hat, IBM, Quay, and
+  generic private registry content.

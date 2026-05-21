@@ -1173,6 +1173,28 @@ IBM Cloud Pak or other private registry content is handled in two places:
   `config/cloudpak.images` and set `APPLIANCE_ADDITIONAL_IMAGES_FILE` to that
   path.
 
+The repository includes sanitized examples for this pattern:
+
+```bash
+#### Create ignored IBM and private registry examples
+
+cp config/pull-secret.multi-registry.json.example \
+    config/pull-secret.multi-registry.json
+
+cp config/operators.ibm-cloudpak.env.example \
+    config/operators.env
+
+cp config/additional-images.ibm-cloudpak.env.example \
+    config/additional-images.env
+
+cp config/cloudpak.images.example \
+    config/cloudpak.images
+```
+
+After editing the ignored pull secret, set `APPLIANCE_PULL_SECRET_FILE` in
+`config/appliance.env` to that file's absolute path. See
+`docs/registry-auth.md` for the registry-to-config mapping.
+
 ## Script 10: Prepare Appliance Assets
 
 Run from the operator workstation after foundry services verify successfully:
