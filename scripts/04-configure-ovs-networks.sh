@@ -16,7 +16,7 @@ load_network_config
 
 APPLIANCE_OVS_BRIDGE="${APPLIANCE_OVS_BRIDGE:-lab-switch}"
 APPLIANCE_LIBVIRT_NETWORK="${APPLIANCE_LIBVIRT_NETWORK:-lab-switch}"
-APPLIANCE_DISABLE_HOST_IPV4_FORWARDING="${APPLIANCE_DISABLE_HOST_IPV4_FORWARDING:-true}"
+APPLIANCE_ENABLE_HOST_IPV4_FORWARDING="${APPLIANCE_ENABLE_HOST_IPV4_FORWARDING:-true}"
 
 APPLIANCE_MACHINE_PORT="${APPLIANCE_MACHINE_PORT:-app-machine}"
 APPLIANCE_MACHINE_PORTGROUP="${APPLIANCE_MACHINE_PORTGROUP:-machine-vlan200}"
@@ -89,7 +89,7 @@ validate_vlan_id "APPLIANCE_MACHINE_VLAN_ID" "${APPLIANCE_MACHINE_VLAN_ID}"
 validate_vlan_id "APPLIANCE_STORAGE_VLAN_ID" "${APPLIANCE_STORAGE_VLAN_ID}"
 validate_vlan_id "APPLIANCE_MIGRATION_VLAN_ID" "${APPLIANCE_MIGRATION_VLAN_ID}"
 validate_ipv4_cidr "APPLIANCE_MACHINE_GATEWAY_CIDR" "${APPLIANCE_MACHINE_GATEWAY_CIDR}"
-validate_boolean "APPLIANCE_DISABLE_HOST_IPV4_FORWARDING" "${APPLIANCE_DISABLE_HOST_IPV4_FORWARDING}"
+validate_boolean "APPLIANCE_ENABLE_HOST_IPV4_FORWARDING" "${APPLIANCE_ENABLE_HOST_IPV4_FORWARDING}"
 
 if [[ -n "${APPLIANCE_STORAGE_GATEWAY_CIDR}" ]]; then
     validate_ipv4_cidr "APPLIANCE_STORAGE_GATEWAY_CIDR" "${APPLIANCE_STORAGE_GATEWAY_CIDR}"
@@ -101,7 +101,7 @@ fi
 
 printf -v OVS_BRIDGE_REMOTE '%q' "${APPLIANCE_OVS_BRIDGE}"
 printf -v LIBVIRT_NETWORK_REMOTE '%q' "${APPLIANCE_LIBVIRT_NETWORK}"
-printf -v DISABLE_FORWARDING_REMOTE '%q' "${APPLIANCE_DISABLE_HOST_IPV4_FORWARDING}"
+printf -v ENABLE_FORWARDING_REMOTE '%q' "${APPLIANCE_ENABLE_HOST_IPV4_FORWARDING}"
 printf -v MACHINE_PORT_REMOTE '%q' "${APPLIANCE_MACHINE_PORT}"
 printf -v MACHINE_PORTGROUP_REMOTE '%q' "${APPLIANCE_MACHINE_PORTGROUP}"
 printf -v MACHINE_VLAN_REMOTE '%q' "${APPLIANCE_MACHINE_VLAN_ID}"
@@ -121,7 +121,7 @@ set -euo pipefail
 OVS_BRIDGE=${OVS_BRIDGE_REMOTE}
 LIBVIRT_NETWORK=${LIBVIRT_NETWORK_REMOTE}
 LIBVIRT_XML_PATH="/etc/libvirt/\${LIBVIRT_NETWORK}.xml"
-DISABLE_HOST_IPV4_FORWARDING=${DISABLE_FORWARDING_REMOTE}
+ENABLE_HOST_IPV4_FORWARDING=${ENABLE_FORWARDING_REMOTE}
 MACHINE_PORT=${MACHINE_PORT_REMOTE}
 MACHINE_PORTGROUP=${MACHINE_PORTGROUP_REMOTE}
 MACHINE_VLAN=${MACHINE_VLAN_REMOTE}
@@ -299,14 +299,20 @@ else
     virsh net-start "\${LIBVIRT_NETWORK}"
 fi
 
-#### These steps leave the cluster network disconnected by design
+#### These steps keep foundry upstream NAT working
 
-# Do not attach physical uplinks to the OVS bridge.
-# Do not enable host NAT for the appliance network.
-if [[ "\${DISABLE_HOST_IPV4_FORWARDING}" == "true" ]]; then
-    cat > /etc/sysctl.d/99-appliance-install-disconnected.conf <<'SYSCTL'
-net.ipv4.ip_forward = 0
-SYSCTL
-    sysctl --system
+# The libvirt default NAT network needs host IPv4 forwarding for foundry.
+# The appliance switch remains disconnected because lab-switch has no uplink or NAT.
+rm -f /etc/sysctl.d/99-appliance-install-disconnected.conf
+
+if [[ "\${ENABLE_HOST_IPV4_FORWARDING}" == "true" ]]; then
+    forwarding_value="1"
+else
+    forwarding_value="0"
 fi
+
+cat > /etc/sysctl.d/99-appliance-install-libvirt-nat.conf <<SYSCTL
+net.ipv4.ip_forward = \${forwarding_value}
+SYSCTL
+sysctl --system
 REMOTE_SCRIPT

@@ -51,3 +51,6 @@ run_remote virsh pool-info default
 run_remote ovs-vsctl show
 run_remote ip -br addr show "${APPLIANCE_OVS_BRIDGE}"
 run_remote ip -br addr show "${APPLIANCE_MACHINE_PORT}"
+
+# Confirm host forwarding is available for foundry's upstream libvirt NAT path.
+run_remote sysctl net.ipv4.ip_forward

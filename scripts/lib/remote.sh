@@ -295,6 +295,21 @@ load_foundry_config() {
     fi
 }
 
+load_appliance_config() {
+    local root_dir
+
+    root_dir="$(repo_root)"
+
+    if [[ ! -f "${root_dir}/config/appliance.env" ]]; then
+        echo "Missing config/appliance.env"
+        echo "Copy config/appliance.env.example to config/appliance.env and adjust it."
+        exit 1
+    fi
+
+    # shellcheck disable=SC1091
+    source "${root_dir}/config/appliance.env"
+}
+
 remote_target() {
     printf '%s@%s\n' "${APPLIANCE_HOST_USER}" "${APPLIANCE_HOST}"
 }

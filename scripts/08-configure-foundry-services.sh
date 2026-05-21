@@ -20,6 +20,7 @@ APPLIANCE_CLUSTER_DOMAIN="${APPLIANCE_CLUSTER_DOMAIN:-appliance.workshop.lan}"
 APPLIANCE_IDM_REALM="${APPLIANCE_IDM_REALM:-${APPLIANCE_CLUSTER_DOMAIN^^}}"
 APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD="${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD:-}"
 APPLIANCE_IDM_ADMIN_PASSWORD="${APPLIANCE_IDM_ADMIN_PASSWORD:-}"
+APPLIANCE_IDM_DNS_FORWARDERS="${APPLIANCE_IDM_DNS_FORWARDERS:-192.168.122.1}"
 APPLIANCE_MIRROR_REGISTRY_NAME="${APPLIANCE_MIRROR_REGISTRY_NAME:-mirror-registry}"
 APPLIANCE_API_IP="${APPLIANCE_API_IP:-172.16.10.5}"
 APPLIANCE_INGRESS_IP="${APPLIANCE_INGRESS_IP:-172.16.10.7}"
@@ -45,6 +46,7 @@ validate_fqdn "APPLIANCE_CLUSTER_DOMAIN" "${APPLIANCE_CLUSTER_DOMAIN}"
 validate_fqdn "APPLIANCE_IDM_REALM" "${APPLIANCE_IDM_REALM}"
 validate_non_empty "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD" "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
 validate_non_empty "APPLIANCE_IDM_ADMIN_PASSWORD" "${APPLIANCE_IDM_ADMIN_PASSWORD}"
+validate_non_empty "APPLIANCE_IDM_DNS_FORWARDERS" "${APPLIANCE_IDM_DNS_FORWARDERS}"
 validate_linux_user "APPLIANCE_FOUNDRY_USER" "${APPLIANCE_FOUNDRY_USER}"
 validate_dns_label "APPLIANCE_MIRROR_REGISTRY_NAME" "${APPLIANCE_MIRROR_REGISTRY_NAME}"
 validate_fqdn "APPLIANCE_FOUNDRY_HOSTNAME" "${APPLIANCE_FOUNDRY_HOSTNAME}"
@@ -74,9 +76,30 @@ if [[ "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}" == replace-with-* ]]; then
     fail "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD must be changed in config/foundry.env."
 fi
 
+if [[ "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}" == *$'\n'* ]]; then
+    fail "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD must be a single-line value."
+fi
+
+if [[ "${#APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}" -lt 8 ]]; then
+    fail "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD must be at least 8 characters for ipa-server-install."
+fi
+
 if [[ "${APPLIANCE_IDM_ADMIN_PASSWORD}" == replace-with-* ]]; then
     fail "APPLIANCE_IDM_ADMIN_PASSWORD must be changed in config/foundry.env."
 fi
+
+if [[ "${APPLIANCE_IDM_ADMIN_PASSWORD}" == *$'\n'* ]]; then
+    fail "APPLIANCE_IDM_ADMIN_PASSWORD must be a single-line value."
+fi
+
+if [[ "${#APPLIANCE_IDM_ADMIN_PASSWORD}" -lt 8 ]]; then
+    fail "APPLIANCE_IDM_ADMIN_PASSWORD must be at least 8 characters for ipa-server-install."
+fi
+
+read -r -a idm_dns_forwarders <<< "${APPLIANCE_IDM_DNS_FORWARDERS}"
+for idm_dns_forwarder in "${idm_dns_forwarders[@]}"; do
+    validate_ipv4 "APPLIANCE_IDM_DNS_FORWARDERS" "${idm_dns_forwarder}"
+done
 
 if [[ -z "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" ]]; then
     fail "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be set in config/foundry.env."
@@ -110,6 +133,7 @@ printf -v RHSM_CODEREADY_REPO_REMOTE '%q' "${RHSM_CODEREADY_REPO:-}"
 printf -v IDM_REALM_REMOTE '%q' "${APPLIANCE_IDM_REALM}"
 printf -v IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
 printf -v IDM_ADMIN_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_ADMIN_PASSWORD}"
+printf -v IDM_DNS_FORWARDERS_REMOTE '%q' "${APPLIANCE_IDM_DNS_FORWARDERS}"
 printf -v FOUNDRY_HOSTNAME_REMOTE '%q' "${APPLIANCE_FOUNDRY_HOSTNAME}"
 printf -v FOUNDRY_USER_REMOTE '%q' "${APPLIANCE_FOUNDRY_USER}"
 printf -v FOUNDRY_IP_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
@@ -140,6 +164,7 @@ RHSM_CODEREADY_REPO=${RHSM_CODEREADY_REPO_REMOTE}
 IDM_REALM=${IDM_REALM_REMOTE}
 IDM_DIRECTORY_MANAGER_PASSWORD=${IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE}
 IDM_ADMIN_PASSWORD=${IDM_ADMIN_PASSWORD_REMOTE}
+IDM_DNS_FORWARDERS=${IDM_DNS_FORWARDERS_REMOTE}
 FOUNDRY_HOSTNAME=${FOUNDRY_HOSTNAME_REMOTE}
 FOUNDRY_USER=${FOUNDRY_USER_REMOTE}
 FOUNDRY_IP=${FOUNDRY_IP_REMOTE}
@@ -192,42 +217,85 @@ visudo -cf /etc/sudoers.d/90-appliance >/dev/null
 
 #### These steps register foundry and install service packages
 
+required_packages=(
+    bind-utils
+    chrony
+    curl
+    firewalld
+    httpd
+    ipa-server
+    ipa-server-dns
+    jq
+    nmstate
+    podman
+    qemu-img
+    skopeo
+    tar
+    gzip
+)
+
+all_required_packages_installed() {
+    local package_name
+
+    for package_name in "\${required_packages[@]}"; do
+        if ! rpm -q "\${package_name}" >/dev/null 2>&1; then
+            return 1
+        fi
+    done
+}
+
+confirm_rhsm_reachable() {
+    # Confirm foundry can resolve RHSM before invoking subscription-manager or dnf.
+    if ! getent hosts subscription.rhsm.redhat.com >/dev/null; then
+        echo "Foundry cannot resolve subscription.rhsm.redhat.com." >&2
+        echo "Check foundry upstream DNS before rerunning this script." >&2
+        exit 1
+    fi
+
+    # Confirm foundry can reach RHSM over HTTPS before waiting on a failing client.
+    if ! timeout 10 bash -c '</dev/tcp/subscription.rhsm.redhat.com/443' >/dev/null 2>&1; then
+        echo "Foundry cannot connect to subscription.rhsm.redhat.com:443." >&2
+        echo "Check the foundry upstream network and host IPv4 forwarding." >&2
+        exit 1
+    fi
+}
+
+foundry_is_registered() {
+    [[ -s /etc/pki/consumer/cert.pem && -s /etc/pki/consumer/key.pem ]]
+}
+
 # Register foundry only when it is not already registered.
-if subscription-manager identity >/dev/null 2>&1; then
+if foundry_is_registered; then
     echo "Foundry is already registered with Red Hat."
 else
+    confirm_rhsm_reachable
     subscription-manager register --org="\${RHSM_ORG_ID}" --activationkey="\${RHSM_ACTIVATION_KEY}"
-fi
-
-# Enable the base RHEL repositories used by foundry services.
-if [[ -n "\${RHSM_BASEOS_REPO}" ]]; then
-    subscription-manager repos --enable="\${RHSM_BASEOS_REPO}"
-fi
-
-if [[ -n "\${RHSM_APPSTREAM_REPO}" ]]; then
-    subscription-manager repos --enable="\${RHSM_APPSTREAM_REPO}"
-fi
-
-if [[ -n "\${RHSM_CODEREADY_REPO}" ]]; then
-    subscription-manager repos --enable="\${RHSM_CODEREADY_REPO}" || true
 fi
 
 #### These steps install DNS, NTP, web, and image-prep tooling
 
-# Install foundry packages in one transaction for predictable dependency solving.
-dnf install -y \
-    bind-utils \
-    chrony \
-    curl \
-    firewalld \
-    httpd \
-    ipa-server \
-    ipa-server-dns \
-    jq \
-    podman \
-    skopeo \
-    tar \
-    gzip
+# Install foundry packages only when a required package is missing.
+if all_required_packages_installed; then
+    echo "Foundry service packages are already installed."
+else
+    confirm_rhsm_reachable
+
+    # Enable the base RHEL repositories used by foundry services.
+    if [[ -n "\${RHSM_BASEOS_REPO}" ]]; then
+        subscription-manager repos --enable="\${RHSM_BASEOS_REPO}"
+    fi
+
+    if [[ -n "\${RHSM_APPSTREAM_REPO}" ]]; then
+        subscription-manager repos --enable="\${RHSM_APPSTREAM_REPO}"
+    fi
+
+    if [[ -n "\${RHSM_CODEREADY_REPO}" ]]; then
+        subscription-manager repos --enable="\${RHSM_CODEREADY_REPO}" || true
+    fi
+
+    echo "Installing foundry service packages. This can take several minutes."
+    dnf install -y "\${required_packages[@]}"
+fi
 
 #### These steps prepare foundry content directories
 
@@ -267,13 +335,21 @@ rm -f "\${hosts_tmp}"
 printf '%s %s %s\n' "\${FOUNDRY_IP}" "\${FOUNDRY_HOSTNAME}" "\${FOUNDRY_HOSTNAME%%.*}" >> /etc/hosts
 
 # Install IdM with integrated DNS once; later runs manage records through ipa.
+read -r -a idm_dns_forwarders <<< "\${IDM_DNS_FORWARDERS}"
+ipa_install_forwarder_args=()
+for idm_dns_forwarder in "\${idm_dns_forwarders[@]}"; do
+    ipa_install_forwarder_args+=(--forwarder "\${idm_dns_forwarder}")
+done
+
 if [[ -f /etc/ipa/default.conf ]]; then
     echo "IdM is already installed on foundry."
 else
+    echo "Installing IdM with integrated DNS. Certificate server setup can be quiet for several minutes."
     ipa-server-install \
         --unattended \
         --setup-dns \
-        --no-forwarders \
+        "\${ipa_install_forwarder_args[@]}" \
+        --forward-policy only \
         --no-dnssec-validation \
         --auto-reverse \
         --domain "\${CLUSTER_DOMAIN}" \
@@ -285,20 +361,93 @@ else
 fi
 
 # Authenticate to IdM so DNS records can be managed with ipa commands.
-printf '%s\n' "\${IDM_ADMIN_PASSWORD}" | kinit admin
+if ! printf '%s\n' "\${IDM_ADMIN_PASSWORD}" | kinit admin >/dev/null 2>&1; then
+    echo "Unable to authenticate to IdM as admin." >&2
+    exit 1
+fi
+
+configure_idm_dns_forwarders() {
+    local command_output
+    local forwarder
+    local -a dnsconfig_args
+
+    dnsconfig_args=(--forward-policy=only)
+
+    for forwarder in "\${idm_dns_forwarders[@]}"; do
+        dnsconfig_args+=(--forwarder "\${forwarder}")
+    done
+
+    if command_output="\$(ipa dnsconfig-mod "\${dnsconfig_args[@]}" 2>&1)"; then
+        echo "Configured IdM global DNS forwarders for foundry."
+    elif grep -Fq "no modifications to be performed" <<< "\${command_output}"; then
+        echo "IdM global DNS forwarders are already configured."
+    else
+        printf '%s\n' "\${command_output}" >&2
+        exit 1
+    fi
+}
+
+configure_named_recursion_policy() {
+    cat > /etc/named/ipa-options-ext.conf <<NAMED_OPTIONS
+/* Managed by appliance-install.
+ *
+ * Foundry may use IdM/BIND for upstream CDN and mirroring lookups through
+ * localhost. Appliance-network clients can query authoritative lab records,
+ * but they cannot use foundry as a general recursive internet resolver.
+ */
+
+listen-on-v6 { any; };
+dnssec-validation no;
+recursion yes;
+allow-recursion { localhost; };
+allow-query-cache { localhost; };
+NAMED_OPTIONS
+
+    named-checkconf /etc/named.conf
+    systemctl restart named.service
+}
+
+#### These steps allow foundry-only upstream DNS recursion
+
+# Foundry needs CDN DNS while mirroring; appliance clients should not recurse.
+configure_idm_dns_forwarders
+configure_named_recursion_policy
+
+echo "Configuring appliance DNS records in IdM."
 
 ensure_a_record() {
     local record_name
     local record_ip
+    local record_output
+    local record_line
+    local record_has_ip
 
     record_name="\$1"
     record_ip="\$2"
+    record_has_ip="false"
 
-    if ipa dnsrecord-show "\${CLUSTER_DOMAIN}" "\${record_name}" >/dev/null 2>&1; then
-        ipa dnsrecord-mod "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}"
+    record_output="\$(ipa dnsrecord-show "\${CLUSTER_DOMAIN}" "\${record_name}" --raw 2>/dev/null || true)"
+
+    if [[ -n "\${record_output}" ]]; then
+        while IFS= read -r record_line; do
+            record_line="\${record_line#"\${record_line%%[![:space:]]*}"}"
+
+            if [[ "\${record_line}" == "arecord: \${record_ip}" ]]; then
+                record_has_ip="true"
+            fi
+        done <<< "\${record_output}"
+
+        if [[ "\${record_has_ip}" == "true" ]]; then
+            echo "DNS record \${record_name} already points to \${record_ip}."
+        else
+            ipa dnsrecord-mod "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}"
+        fi
     else
-        ipa dnsrecord-add "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}" --a-create-reverse || \
+        if ipa dnsrecord-add "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}" --a-create-reverse >/dev/null 2>&1; then
+            echo "Created DNS record \${record_name} pointing to \${record_ip} with a reverse record."
+        else
             ipa dnsrecord-add "\${CLUSTER_DOMAIN}" "\${record_name}" --a-rec "\${record_ip}"
+        fi
     fi
 }
 
@@ -365,15 +514,40 @@ systemctl restart httpd.service
 # Open the ports expected by DNS, NTP, HTTP, HTTPS, and a future local registry.
 systemctl enable firewalld.service
 systemctl start firewalld.service
-firewall-cmd --permanent --add-service=dns
-firewall-cmd --permanent --add-service=ntp
-firewall-cmd --permanent --add-service=http
-firewall-cmd --permanent --add-service=https
-firewall-cmd --permanent --add-service=kerberos
-firewall-cmd --permanent --add-service=kpasswd
-firewall-cmd --permanent --add-service=ldap
-firewall-cmd --permanent --add-service=ldaps
-firewall-cmd --permanent --add-port=5000/tcp
+
+ensure_firewall_service() {
+    local service_name
+
+    service_name="\$1"
+
+    if firewall-cmd --permanent --query-service="\${service_name}" >/dev/null 2>&1; then
+        echo "Firewall service \${service_name} is already enabled."
+    else
+        firewall-cmd --permanent --add-service="\${service_name}"
+    fi
+}
+
+ensure_firewall_port() {
+    local port_value
+
+    port_value="\$1"
+
+    if firewall-cmd --permanent --query-port="\${port_value}" >/dev/null 2>&1; then
+        echo "Firewall port \${port_value} is already enabled."
+    else
+        firewall-cmd --permanent --add-port="\${port_value}"
+    fi
+}
+
+ensure_firewall_service dns
+ensure_firewall_service ntp
+ensure_firewall_service http
+ensure_firewall_service https
+ensure_firewall_service kerberos
+ensure_firewall_service kpasswd
+ensure_firewall_service ldap
+ensure_firewall_service ldaps
+ensure_firewall_port 5000/tcp
 firewall-cmd --reload
 
 #### These steps record appliance-builder environment defaults
