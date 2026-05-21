@@ -38,6 +38,11 @@ location. The real `config/appliance.env` file is ignored by git.
 and channels mirrored into the appliance image. Copy it to ignored
 `config/operators.env` when the workshop needs a different operator set.
 
+`config/additional-images.env.example` documents optional non-operator image
+refs mirrored into the appliance image. Copy it to ignored
+`config/additional-images.env` for private registry content such as IBM Cloud
+Pak images.
+
 ## Scripts
 
 Scripts are numbered in the order an operator should run them. Keep each script
@@ -47,7 +52,7 @@ focused on one phase, with readable comments and clear commands.
 | --- | --- |
 | `01` through `05` | Prepare and verify the virtualization host. |
 | `06` through `09` | Create, configure, and verify foundry. |
-| `10` through `12` | Prepare OpenShift 4.21 appliance assets, including the configured operator set, build `appliance.raw`, and create the Agent Installer config ISO on foundry. |
+| `10` through `12` | Prepare OpenShift 4.21 appliance assets, including configured operators and additional images, build `appliance.raw`, and create the Agent Installer config ISO on foundry. |
 | `13` through `16` | Create or reimage OpenShift VMs, watch the install, and verify the cluster. |
 
 The OpenShift appliance scripts generate environment-specific YAML and secret

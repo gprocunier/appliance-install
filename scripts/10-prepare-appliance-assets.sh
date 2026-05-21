@@ -46,6 +46,8 @@ APPLIANCE_MACHINE_PREFIX="${APPLIANCE_MACHINE_GATEWAY_CIDR#*/}"
 
 load_operator_config
 APPLIANCE_OPERATOR_PACKAGES_PAYLOAD="$(operator_packages_payload)"
+load_additional_images_config
+APPLIANCE_ADDITIONAL_IMAGES_PAYLOAD="$(additional_images_payload)"
 
 #### These steps validate appliance build settings before making changes
 
@@ -150,6 +152,7 @@ printf -v NODE_3_NAME_REMOTE '%q' "${APPLIANCE_NODE_3_NAME}"
 printf -v NODE_3_IP_REMOTE '%q' "${APPLIANCE_NODE_3_IP}"
 printf -v NODE_3_MAC_REMOTE '%q' "${APPLIANCE_NODE_3_MAC}"
 printf -v OPERATOR_PACKAGES_REMOTE '%q' "${APPLIANCE_OPERATOR_PACKAGES_PAYLOAD}"
+printf -v ADDITIONAL_IMAGES_REMOTE '%q' "${APPLIANCE_ADDITIONAL_IMAGES_PAYLOAD}"
 
 run_foundry sudo -n /bin/bash -s <<REMOTE_SCRIPT
 set -euo pipefail
@@ -185,6 +188,7 @@ NODE_3_NAME=${NODE_3_NAME_REMOTE}
 NODE_3_IP=${NODE_3_IP_REMOTE}
 NODE_3_MAC=${NODE_3_MAC_REMOTE}
 OPERATOR_PACKAGES=${OPERATOR_PACKAGES_REMOTE}
+ADDITIONAL_IMAGES=${ADDITIONAL_IMAGES_REMOTE}
 PULL_SECRET_PATH=/home/appliance/.config/containers/auth.json
 
 #### These steps create the asset and cluster config directories
@@ -204,6 +208,7 @@ chmod 0600 /srv/appliance/secrets/pull-secret.txt
 echo "Writing \${ASSETS_DIR}/appliance-config.yaml."
 export OCP_VERSION OCP_CHANNEL OCP_ARCH IMAGE_DISK_SIZE_GB BUILDER_IMAGE
 export ASSETS_DIR CORE_PASSWORD CORE_SSH_KEY PULL_SECRET_PATH OPERATOR_PACKAGES
+export ADDITIONAL_IMAGES
 python3 - <<'PY'
 import os
 from pathlib import Path
@@ -214,6 +219,9 @@ def squote(value):
 
 pull_secret = Path(os.environ["PULL_SECRET_PATH"]).read_text().strip()
 operator_catalogs = OrderedDict()
+additional_images = [
+    line for line in os.environ["ADDITIONAL_IMAGES"].splitlines() if line.strip()
+]
 
 for line in os.environ["OPERATOR_PACKAGES"].splitlines():
     catalog, package, channel = line.split("|", 2)
@@ -239,8 +247,14 @@ lines = [
     "enableInteractiveFlow: false",
     "useDefaultSourceNames: true",
     "disableSigstoreForAdditionalImages: true",
-    "operators:",
 ]
+
+if additional_images:
+    lines.append("additionalImages:")
+    for image in additional_images:
+        lines.append(f"- name: {squote(image)}")
+
+lines.append("operators:")
 
 for catalog, packages in operator_catalogs.items():
     lines.extend([

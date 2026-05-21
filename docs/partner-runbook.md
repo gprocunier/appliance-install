@@ -43,6 +43,7 @@ cp config/network.env.example config/network.env
 cp config/foundry.env.example config/foundry.env
 cp config/appliance.env.example config/appliance.env
 cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
 
 #### Edit the ignored files for the target lab
 
@@ -52,6 +53,7 @@ vi config/network.env
 vi config/foundry.env
 vi config/appliance.env
 vi config/operators.env
+vi config/additional-images.env
 ```
 
 Important local values:
@@ -71,6 +73,9 @@ Important local values:
   virtualization host.
 - `config/operators.env`: operator catalog image, package names, and channels
   mirrored into `appliance.raw`.
+- `config/additional-images.env`: optional non-operator image refs mirrored into
+  `appliance.raw`, including private registry content such as IBM Cloud Pak
+  images.
 
 Keep real pull-secret content, activation keys, passwords, private hostnames,
 and private file locations out of tracked files. Use the tracked examples as
@@ -117,8 +122,9 @@ Use `./scripts/14-destroy-ocp-vms.sh` only when the three OpenShift VMs need to
 be removed and reimaged before rerunning script `13`. With the default
 `APPLIANCE_REFRESH_BASE_IMAGE=false`, script `13` reuses the existing
 `appliance-base.qcow2` and refreshes only the config ISO and node overlays.
-If `config/operators.env` changes, rerun scripts `10` and `11`, then run script
-`13` with `APPLIANCE_REFRESH_BASE_IMAGE=true` to replace the VM base image.
+If `config/operators.env` or `config/additional-images.env` changes, rerun
+scripts `10` and `11`, then run script `13` with
+`APPLIANCE_REFRESH_BASE_IMAGE=true` to replace the VM base image.
 
 ## Script 01: Register The Virtualization Host
 
@@ -1153,6 +1159,20 @@ remove, or change packages and channels before script `10` writes
 | `rook-ceph-operator` | `stable-4.21` |
 | `cephcsi-operator` | `stable-4.21` |
 
+IBM Cloud Pak or other private registry content is handled in two places:
+
+- Put IBM registry credentials in the ignored pull secret file referenced by
+  `APPLIANCE_PULL_SECRET_FILE`. For IBM Entitled Registry content, that pull
+  secret must include the registry auth needed for `cp.icr.io` and any other IBM
+  registries used by the content list.
+- Put IBM operator catalog entries in ignored `config/operators.env` when an
+  operator should be mirrored through a catalog.
+- Put non-operator image refs in ignored `config/additional-images.env` when
+  specific images must be included through ApplianceConfig `additionalImages`.
+  For large lists, put one image ref per line in an ignored file such as
+  `config/cloudpak.images` and set `APPLIANCE_ADDITIONAL_IMAGES_FILE` to that
+  path.
+
 ## Script 10: Prepare Appliance Assets
 
 Run from the operator workstation after foundry services verify successfully:
@@ -1162,10 +1182,11 @@ Run from the operator workstation after foundry services verify successfully:
 ```
 
 This script loads `config/host.env`, `config/network.env`,
-`config/foundry.env`, `config/appliance.env`, and `config/operators.env`. It
-validates the appliance image size, node disk sizes, cluster DNS identity, node
-MAC addresses, pull secret file, core SSH public key, and operator package list
-before making changes.
+`config/foundry.env`, `config/appliance.env`, `config/operators.env`, and
+`config/additional-images.env`. It validates the appliance image size, node disk
+sizes, cluster DNS identity, node MAC addresses, pull secret file, core SSH
+public key, operator package list, and additional image refs before making
+changes.
 
 Then it copies the configured local pull secret to foundry-local secret
 locations and writes generated OpenShift appliance input files on foundry:
@@ -1180,6 +1201,11 @@ The operator list in `appliance-config.yaml` is written from
 `APPLIANCE_OPERATOR_PACKAGES`. Each entry can use `package|channel` to use the
 default catalog, or `catalog-image|package|channel` for a package from a
 different catalog image.
+
+The optional `additionalImages` list in `appliance-config.yaml` is written from
+`APPLIANCE_ADDITIONAL_IMAGES` and `APPLIANCE_ADDITIONAL_IMAGES_FILE`. Use this
+for private registry image refs that are not represented by an operator catalog
+package.
 
 `additionalNTPSources` is written from `APPLIANCE_AGENT_NTP_SOURCE`, which
 defaults to foundry/IdM on the appliance network. This matters in the
@@ -1207,6 +1233,9 @@ Troubleshooting checkpoints:
   `APPLIANCE_IMAGE_DISK_SIZE_GB`.
 - Operator package entries must use `package|channel` or
   `catalog-image|package|channel`.
+- Additional image entries must be complete image refs such as
+  `cp.icr.io/cp/example-image:tag` or
+  `icr.io/cpopen/example-image@sha256:replace-with-digest`.
 
 ## Script 11: Build The Appliance Image
 
@@ -1435,7 +1464,8 @@ Troubleshooting checkpoints:
   `/etc/ipa/default.conf` already exists, then manages records and services.
 - `09-verify-foundry-services.sh` is read-only.
 - `10-prepare-appliance-assets.sh` overwrites generated appliance and cluster
-  YAML on foundry. Re-run it after changing appliance or operator config.
+  YAML on foundry. Re-run it after changing appliance, operator, or additional
+  image config.
 - `11-build-appliance-image.sh` rebuilds `appliance.raw`. Set
   `APPLIANCE_CLEAN_BEFORE_BUILD="true"` in ignored local config only when old
   temporary build output should be cleaned first.
@@ -1468,6 +1498,7 @@ ls config/network.env
 ls config/foundry.env
 ls config/appliance.env
 ls config/operators.env
+ls config/additional-images.env
 
 #### Confirm SSH to the virtualization host
 

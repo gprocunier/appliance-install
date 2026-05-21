@@ -34,6 +34,7 @@ flowchart LR
 | `config/*.env` | Operator workstation | Local settings read by the scripts. |
 | `config/appliance.env.example` | Tracked template | Sanitized OpenShift appliance build and VM defaults. |
 | `config/operators.env.example` | Tracked template | Sanitized default operator catalog, packages, and channels mirrored into `appliance.raw`. |
+| `config/additional-images.env.example` | Tracked template | Sanitized optional image references for non-operator content mirrored into `appliance.raw`. |
 | `scripts/01-register-rhn.sh` | Operator workstation | Registers the remote virtualization host with Red Hat. |
 | `scripts/02-install-host-packages.sh` | Operator workstation | Installs packages on the remote virtualization host, then reboots it. |
 | `scripts/03-enable-host-services.sh` | Operator workstation | Enables services and the default libvirt image pool on the remote virtualization host. |
@@ -76,7 +77,7 @@ root on the operator workstation:
 | Local config | Copy `config/*.env.example` to ignored `config/*.env` files | Keep real pull secrets, activation keys, passwords, private hostnames, and private file locations out of tracked files. |
 | Host setup | `01` through `05` | Script `02` reboots the virtualization host; wait for SSH before continuing. |
 | Foundry setup | `06` through `09` | Script `06` waits for foundry SSH; script `08` can be long while installing packages and IdM. |
-| Appliance build | `10` through `12` | Script `10` writes `additionalNTPSources` into `agent-config.yaml` from `APPLIANCE_AGENT_NTP_SOURCE`, defaulting to foundry/IdM, and writes the operator list from `config/operators.env`. Script `11` is the longest phase and can be quiet while pulling and mirroring OpenShift 4.21 content and operators. Script `12` creates `agentconfig.noarch.iso`. |
+| Appliance build | `10` through `12` | Script `10` writes `additionalNTPSources` into `agent-config.yaml` from `APPLIANCE_AGENT_NTP_SOURCE`, defaulting to foundry/IdM, writes operators from `config/operators.env`, and writes optional extra images from `config/additional-images.env`. Script `11` is the longest phase and can be quiet while pulling and mirroring OpenShift 4.21 content, operators, and additional images. Script `12` creates `agentconfig.noarch.iso`. |
 | VM boot | `13` | The first run copies `appliance.raw`, converts it to `appliance-base.qcow2`, and creates node overlays. Later runs reuse `appliance-base.qcow2` by default when `APPLIANCE_REFRESH_BASE_IMAGE=false`. |
 | Install watch | `15` | The installer wait commands run with sudo and can sit with little output while the nodes boot, form the cluster, and settle operators. |
 | Cluster verification | `16` | The script creates a temporary local API tunnel through the virtualization host, uses a temporary kubeconfig copy, runs sanitized `oc` checks, then cleans up. |
@@ -85,6 +86,12 @@ The default OpenShift 4.21 appliance build includes the requested operator set.
 To customize mirrored operators, copy `config/operators.env.example` to ignored
 `config/operators.env` and edit the package/channel entries before running
 script `10`.
+
+For IBM Cloud Pak content, keep IBM registry credentials in the ignored pull
+secret file referenced by `APPLIANCE_PULL_SECRET_FILE`. Add IBM operator catalog
+entries to `config/operators.env`, and add any required non-operator image refs
+to ignored `config/additional-images.env` or an ignored `config/*.images` file
+referenced from that env file.
 
 | Capability | Appliance package entries |
 | --- | --- |
@@ -105,6 +112,7 @@ cp config/network.env.example config/network.env
 cp config/foundry.env.example config/foundry.env
 cp config/appliance.env.example config/appliance.env
 cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
 ```
 
 Edit those local files for the target environment. They are ignored by git.
@@ -154,9 +162,10 @@ The reimage path refreshes only the config ISO and node overlays unless
 `appliance-base.qcow2` and pulls only the current config ISO from foundry.
 Script `12` regenerates installer state for the next install, including the
 foundry-local kubeconfig, so treat it as the start of a new install attempt.
-If `config/operators.env` changes, rerun scripts `10` and `11`, then run script
-`13` with `APPLIANCE_REFRESH_BASE_IMAGE=true` so the VM base image is rebuilt
-from the new `appliance.raw`.
+If `config/operators.env` or `config/additional-images.env` changes, rerun
+scripts `10` and `11`, then run script `13` with
+`APPLIANCE_REFRESH_BASE_IMAGE=true` so the VM base image is rebuilt from the new
+`appliance.raw`.
 
 The default live artifact directory on the virtualization host is
 `/home/libvirt/images/appliance-install`, with files such as
@@ -186,6 +195,7 @@ See [Execution Model](docs/execution-model.md) for more detail.
 | `config/foundry.env.example` | Foundry VM, DNS, NTP, and staging defaults. |
 | `config/appliance.env.example` | OpenShift 4.21 appliance build, cluster, and VM defaults. |
 | `config/operators.env.example` | Default operator catalog, package, and channel list for the appliance build. |
+| `config/additional-images.env.example` | Optional additional image refs for private registry or application content. |
 | `docs/` | Public operator notes and partner runbooks. |
 | `scripts/01-*.sh` through `scripts/09-*.sh` | Virtualization host and foundry preparation. |
 | `scripts/10-*.sh` through `scripts/16-*.sh` | OpenShift appliance asset build, VM creation, reimage, install watch, and cluster verification. |

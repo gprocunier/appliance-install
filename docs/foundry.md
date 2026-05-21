@@ -27,6 +27,7 @@ Create local foundry config from the tracked example:
 cp config/foundry.env.example config/foundry.env
 cp config/appliance.env.example config/appliance.env
 cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
 ```
 
 Edit both ignored files for the target lab. The real files are ignored by git.
@@ -74,6 +75,14 @@ set publishable. Copy it to ignored `config/operators.env` and edit that local
 file when the target workshop needs a different catalog, package, or channel
 list.
 
+The tracked `config/additional-images.env.example` keeps optional non-operator
+image refs publishable. Copy it to ignored `config/additional-images.env` for
+IBM Cloud Pak or other private registry image refs that should be mirrored into
+`appliance.raw`. The registry credentials for those images must be present in
+the pull secret referenced by `APPLIANCE_PULL_SECRET_FILE`. Large image lists
+can live in ignored `config/*.images` files referenced by
+`APPLIANCE_ADDITIONAL_IMAGES_FILE`.
+
 ## Run Order
 
 Run these from the repository root on the operator workstation:
@@ -119,7 +128,9 @@ NTP, and web staging endpoints respond.
 ignored paths and writes generated `appliance-config.yaml`,
 `install-config.yaml`, and `agent-config.yaml` under `/srv/appliance`. It reads
 the operator package list from ignored `config/operators.env`, falling back to
-the tracked example when the local file does not exist. Those generated files
+the tracked example when the local file does not exist. It also reads optional
+additional image refs from ignored `config/additional-images.env` and writes
+them into the ApplianceConfig `additionalImages` section. Those generated files
 may contain secret or environment-specific values and should not be copied into
 tracked documentation.
 
@@ -159,11 +170,11 @@ operator capabilities by default:
 | Web Terminal | `web-terminal` |
 | Quay | `quay-operator` |
 
-Changing the operator set changes `appliance.raw`, not only the Agent Installer
-config ISO. After editing `config/operators.env`, rerun scripts `10` and `11`.
-When redeploying the VMs, run script `13` with
-`APPLIANCE_REFRESH_BASE_IMAGE=true` so the virtualization host replaces
-`appliance-base.qcow2` with the rebuilt image.
+Changing the operator set or additional image list changes `appliance.raw`, not
+only the Agent Installer config ISO. After editing `config/operators.env` or
+`config/additional-images.env`, rerun scripts `10` and `11`. When redeploying
+the VMs, run script `13` with `APPLIANCE_REFRESH_BASE_IMAGE=true` so the
+virtualization host replaces `appliance-base.qcow2` with the rebuilt image.
 
 ## Rebuild Foundry
 

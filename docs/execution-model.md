@@ -61,6 +61,7 @@ cp config/rhsm.env.example config/rhsm.env
 cp config/network.env.example config/network.env
 cp config/appliance.env.example config/appliance.env
 cp config/operators.env.example config/operators.env
+cp config/additional-images.env.example config/additional-images.env
 ```
 
 `config/host.env` describes how the operator workstation reaches the
@@ -96,6 +97,14 @@ password values out of tracked files.
 channels mirrored into `appliance.raw`. The tracked example contains the default
 workshop set. Edit the ignored local file before script `10` to add, remove, or
 change operator packages.
+
+`config/additional-images.env` describes optional non-operator image refs
+mirrored into `appliance.raw` through the ApplianceConfig `additionalImages`
+section. Use it for IBM Cloud Pak operand or application images that are not
+pulled through an operator catalog. Private registry credentials must be in the
+pull secret referenced by `APPLIANCE_PULL_SECRET_FILE`. Large image lists can
+live in ignored `config/*.images` files referenced by
+`APPLIANCE_ADDITIONAL_IMAGES_FILE`.
 
 All real `config/*.env` files are ignored by git. The tracked
 `config/*.env.example` files are sanitized templates.
@@ -145,10 +154,10 @@ path refreshes only the config ISO and per-node overlays. Script `12`
 regenerates installer state for the next install, including the foundry-local
 kubeconfig used by scripts `15` and `16`.
 
-Changing `config/operators.env` changes the content baked into
-`appliance.raw`, not just the config ISO. After changing operators, rerun
-scripts `10` and `11`, then refresh the host base image during script `13` with
-`APPLIANCE_REFRESH_BASE_IMAGE=true`.
+Changing `config/operators.env` or `config/additional-images.env` changes the
+content baked into `appliance.raw`, not just the config ISO. After changing
+mirrored content, rerun scripts `10` and `11`, then refresh the host base image
+during script `13` with `APPLIANCE_REFRESH_BASE_IMAGE=true`.
 
 ## Long-Running Phases
 
@@ -184,6 +193,8 @@ It provides small helper functions:
 - `load_appliance_config`: loads `config/appliance.env`
 - `load_operator_config`: loads `config/operators.env`, or the tracked example
   when the ignored local file does not exist
+- `load_additional_images_config`: loads `config/additional-images.env`, or the
+  tracked example when the ignored local file does not exist
 - `run_remote`: runs one command over SSH
 - `run_remote_bash`: runs a readable multi-line bash block over SSH
 - `run_foundry`: runs one command on foundry through the virtualization host

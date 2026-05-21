@@ -339,6 +339,34 @@ load_operator_config() {
     fi
 }
 
+load_additional_images_config() {
+    local root_dir
+    local images_declare
+
+    root_dir="$(repo_root)"
+
+    if [[ -f "${root_dir}/config/additional-images.env" ]]; then
+        # shellcheck disable=SC1091
+        source "${root_dir}/config/additional-images.env"
+    elif [[ -f "${root_dir}/config/additional-images.env.example" ]]; then
+        # shellcheck disable=SC1091
+        source "${root_dir}/config/additional-images.env.example"
+    else
+        APPLIANCE_ADDITIONAL_IMAGES=()
+    fi
+
+    APPLIANCE_ADDITIONAL_IMAGES_FILE="${APPLIANCE_ADDITIONAL_IMAGES_FILE:-}"
+
+    if ! images_declare="$(declare -p APPLIANCE_ADDITIONAL_IMAGES 2>/dev/null)"; then
+        APPLIANCE_ADDITIONAL_IMAGES=()
+        images_declare="$(declare -p APPLIANCE_ADDITIONAL_IMAGES)"
+    fi
+
+    if [[ "${images_declare}" != declare\ -a* && "${images_declare}" != declare\ -ax* ]]; then
+        fail "APPLIANCE_ADDITIONAL_IMAGES must be a bash array in config/additional-images.env."
+    fi
+}
+
 normalize_operator_entry() {
     local entry
     local first
@@ -384,6 +412,67 @@ normalize_operator_entry() {
     fi
 
     printf '%s|%s|%s\n' "${catalog}" "${package}" "${channel}"
+}
+
+normalize_additional_image_entry() {
+    local image
+
+    image="$1"
+
+    validate_non_empty "additional image" "${image}"
+
+    if [[ "${image}" == *"://"* ]]; then
+        fail "Additional image entries must be image references, not URLs: ${image}"
+    fi
+
+    if [[ "${image}" =~ [[:space:]\",] ]]; then
+        fail "Additional image entries must not contain whitespace, quotes, or commas: ${image}"
+    fi
+
+    if [[ ! "${image}" =~ ^[A-Za-z0-9._/:@+-]+$ ]]; then
+        fail "Additional image contains unsupported characters: ${image}"
+    fi
+
+    printf '%s\n' "${image}"
+}
+
+additional_images_payload() {
+    local image
+    local image_file
+    local line
+    local root_dir
+
+    for image in "${APPLIANCE_ADDITIONAL_IMAGES[@]}"; do
+        normalize_additional_image_entry "${image}"
+    done
+
+    if [[ -z "${APPLIANCE_ADDITIONAL_IMAGES_FILE}" ]]; then
+        return
+    fi
+
+    root_dir="$(repo_root)"
+
+    if [[ "${APPLIANCE_ADDITIONAL_IMAGES_FILE}" == /* ]]; then
+        image_file="${APPLIANCE_ADDITIONAL_IMAGES_FILE}"
+    else
+        image_file="${root_dir}/${APPLIANCE_ADDITIONAL_IMAGES_FILE}"
+    fi
+
+    if [[ ! -f "${image_file}" ]]; then
+        fail "Missing APPLIANCE_ADDITIONAL_IMAGES_FILE: ${image_file}"
+    fi
+
+    while IFS= read -r line || [[ -n "${line}" ]]; do
+        if [[ -z "${line//[[:space:]]/}" ]]; then
+            continue
+        fi
+
+        if [[ "${line}" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+
+        normalize_additional_image_entry "${line}"
+    done < "${image_file}"
 }
 
 operator_packages_payload() {

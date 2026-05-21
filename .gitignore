@@ -1,5 +1,6 @@
 # Local operator configuration
 config/*.env
+config/*.images
 
 # Local run output
 logs/
