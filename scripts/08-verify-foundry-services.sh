@@ -24,6 +24,19 @@ APPLIANCE_NODE_2_NAME="${APPLIANCE_NODE_2_NAME:-ocp-02}"
 APPLIANCE_NODE_3_NAME="${APPLIANCE_NODE_3_NAME:-ocp-03}"
 APPLIANCE_FOUNDRY_HOSTNAME="${APPLIANCE_FOUNDRY_HOSTNAME:-foundry.${APPLIANCE_CLUSTER_DOMAIN}}"
 
+#### These steps validate verification targets before running checks
+
+# Validate the names and addresses used by the DNS checks.
+validate_fqdn "APPLIANCE_CLUSTER_DOMAIN" "${APPLIANCE_CLUSTER_DOMAIN}"
+validate_dns_label "APPLIANCE_MIRROR_REGISTRY_NAME" "${APPLIANCE_MIRROR_REGISTRY_NAME}"
+validate_fqdn "APPLIANCE_FOUNDRY_HOSTNAME" "${APPLIANCE_FOUNDRY_HOSTNAME}"
+validate_ipv4 "APPLIANCE_FOUNDRY_APPLIANCE_IP" "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
+validate_ipv4 "APPLIANCE_API_IP" "${APPLIANCE_API_IP}"
+validate_ipv4 "APPLIANCE_INGRESS_IP" "${APPLIANCE_INGRESS_IP}"
+validate_dns_label "APPLIANCE_NODE_1_NAME" "${APPLIANCE_NODE_1_NAME}"
+validate_dns_label "APPLIANCE_NODE_2_NAME" "${APPLIANCE_NODE_2_NAME}"
+validate_dns_label "APPLIANCE_NODE_3_NAME" "${APPLIANCE_NODE_3_NAME}"
+
 #### These commands intentionally stay simple and readable
 
 # Show foundry identity and interface state.

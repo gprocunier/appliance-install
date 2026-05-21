@@ -32,6 +32,44 @@ APPLIANCE_FOUNDRY_ASSETS_DIR="${APPLIANCE_FOUNDRY_ASSETS_DIR:-/srv/appliance/ass
 APPLIANCE_FOUNDRY_HTTP_ROOT="${APPLIANCE_FOUNDRY_HTTP_ROOT:-/srv/appliance}"
 APPLIANCE_BUILDER_IMAGE="${APPLIANCE_BUILDER_IMAGE:-catalog.redhat.com/software/containers/assisted/agentpreinstall-image-builder-rhel9/65a55174031d94dbea7f2e00}"
 
+#### These steps validate foundry service settings before making changes
+
+# Keep DNS, NTP, and filesystem values inside the formats their services accept.
+validate_non_empty "RHSM_ORG_ID" "${RHSM_ORG_ID}"
+validate_non_empty "RHSM_ACTIVATION_KEY" "${RHSM_ACTIVATION_KEY}"
+validate_fqdn "APPLIANCE_CLUSTER_DOMAIN" "${APPLIANCE_CLUSTER_DOMAIN}"
+validate_dns_label "APPLIANCE_MIRROR_REGISTRY_NAME" "${APPLIANCE_MIRROR_REGISTRY_NAME}"
+validate_fqdn "APPLIANCE_FOUNDRY_HOSTNAME" "${APPLIANCE_FOUNDRY_HOSTNAME}"
+validate_ipv4 "APPLIANCE_FOUNDRY_APPLIANCE_IP" "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
+validate_ipv4_cidr "APPLIANCE_FOUNDRY_APPLIANCE_CIDR" "${APPLIANCE_FOUNDRY_APPLIANCE_CIDR}"
+validate_ipv4 "APPLIANCE_API_IP" "${APPLIANCE_API_IP}"
+validate_ipv4 "APPLIANCE_INGRESS_IP" "${APPLIANCE_INGRESS_IP}"
+validate_dns_label "APPLIANCE_NODE_1_NAME" "${APPLIANCE_NODE_1_NAME}"
+validate_ipv4 "APPLIANCE_NODE_1_IP" "${APPLIANCE_NODE_1_IP}"
+validate_dns_label "APPLIANCE_NODE_2_NAME" "${APPLIANCE_NODE_2_NAME}"
+validate_ipv4 "APPLIANCE_NODE_2_IP" "${APPLIANCE_NODE_2_IP}"
+validate_dns_label "APPLIANCE_NODE_3_NAME" "${APPLIANCE_NODE_3_NAME}"
+validate_ipv4 "APPLIANCE_NODE_3_IP" "${APPLIANCE_NODE_3_IP}"
+validate_absolute_path "APPLIANCE_FOUNDRY_ASSETS_DIR" "${APPLIANCE_FOUNDRY_ASSETS_DIR}"
+validate_absolute_path "APPLIANCE_FOUNDRY_HTTP_ROOT" "${APPLIANCE_FOUNDRY_HTTP_ROOT}"
+validate_non_empty "APPLIANCE_BUILDER_IMAGE" "${APPLIANCE_BUILDER_IMAGE}"
+
+if [[ "${APPLIANCE_BUILDER_IMAGE}" =~ [[:space:]] ]]; then
+    fail "APPLIANCE_BUILDER_IMAGE must not contain whitespace."
+fi
+
+if [[ -n "${RHSM_BASEOS_REPO:-}" ]]; then
+    validate_simple_name "RHSM_BASEOS_REPO" "${RHSM_BASEOS_REPO}"
+fi
+
+if [[ -n "${RHSM_APPSTREAM_REPO:-}" ]]; then
+    validate_simple_name "RHSM_APPSTREAM_REPO" "${RHSM_APPSTREAM_REPO}"
+fi
+
+if [[ -n "${RHSM_CODEREADY_REPO:-}" ]]; then
+    validate_simple_name "RHSM_CODEREADY_REPO" "${RHSM_CODEREADY_REPO}"
+fi
+
 printf -v RHSM_ORG_ID_REMOTE '%q' "${RHSM_ORG_ID}"
 printf -v RHSM_ACTIVATION_KEY_REMOTE '%q' "${RHSM_ACTIVATION_KEY}"
 printf -v RHSM_BASEOS_REPO_REMOTE '%q' "${RHSM_BASEOS_REPO:-}"
@@ -185,6 +223,9 @@ ptr-record=\$(reverse_ipv4_name "\${NODE_2_IP}"),\${NODE_2_NAME}.\${CLUSTER_DOMA
 ptr-record=\$(reverse_ipv4_name "\${NODE_3_IP}"),\${NODE_3_NAME}.\${CLUSTER_DOMAIN}
 DNSMASQ_CONF
 
+# Check the generated DNS configuration before restarting the service.
+dnsmasq --test --conf-file=/etc/dnsmasq.d/appliance-install.conf
+
 systemctl enable dnsmasq.service
 systemctl restart dnsmasq.service
 
@@ -201,6 +242,9 @@ local stratum 10
 leapsectz right/UTC
 logdir /var/log/chrony
 CHRONY_CONF
+
+# Check the generated NTP configuration before restarting the service.
+chronyd -p -f /etc/chrony.conf >/dev/null
 
 systemctl enable chronyd.service
 systemctl restart chronyd.service
@@ -221,6 +265,9 @@ Alias /openshift/ "\${HTTP_ROOT}/openshift/"
     Require all granted
 </Directory>
 HTTPD_CONF
+
+# Check the generated web server configuration before restarting the service.
+httpd -t
 
 systemctl enable httpd.service
 systemctl restart httpd.service
