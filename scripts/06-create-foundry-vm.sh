@@ -29,6 +29,7 @@ APPLIANCE_FOUNDRY_UPSTREAM_MAC="${APPLIANCE_FOUNDRY_UPSTREAM_MAC:-52:54:00:10:10
 APPLIANCE_FOUNDRY_APPLIANCE_MAC="${APPLIANCE_FOUNDRY_APPLIANCE_MAC:-52:54:00:10:10:11}"
 APPLIANCE_FOUNDRY_APPLIANCE_PREFIX="${APPLIANCE_FOUNDRY_APPLIANCE_PREFIX:-24}"
 APPLIANCE_FOUNDRY_WAIT_FOR_SSH="${APPLIANCE_FOUNDRY_WAIT_FOR_SSH:-true}"
+APPLIANCE_FOUNDRY_CONSOLE_PASSWORD="${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD:-}"
 
 if [[ -z "${APPLIANCE_FOUNDRY_BASE_IMAGE}" ]]; then
     echo "APPLIANCE_FOUNDRY_BASE_IMAGE must be set in config/foundry.env." >&2
@@ -45,6 +46,21 @@ APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY_FILE="${APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY_FILE:-
 if [[ ! -f "${APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY_FILE}" ]]; then
     echo "Missing SSH public key: ${APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY_FILE}" >&2
     echo "Set APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY_FILE in config/foundry.env." >&2
+    exit 1
+fi
+
+if [[ -z "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" ]]; then
+    echo "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be set in config/foundry.env." >&2
+    exit 1
+fi
+
+if [[ "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" == replace-with-* ]]; then
+    echo "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be changed in config/foundry.env." >&2
+    exit 1
+fi
+
+if [[ "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" == *$'\n'* ]]; then
+    echo "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be a single-line value." >&2
     exit 1
 fi
 
@@ -93,6 +109,7 @@ printf -v FOUNDRY_APPLIANCE_IP_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
 printf -v FOUNDRY_APPLIANCE_PREFIX_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_PREFIX}"
 printf -v FOUNDRY_SSH_PUBLIC_KEY_REMOTE '%q' "${APPLIANCE_FOUNDRY_SSH_PUBLIC_KEY}"
 printf -v FOUNDRY_WAIT_FOR_SSH_REMOTE '%q' "${APPLIANCE_FOUNDRY_WAIT_FOR_SSH}"
+printf -v FOUNDRY_CONSOLE_PASSWORD_REMOTE '%q' "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}"
 
 run_remote_bash <<REMOTE_SCRIPT
 set -euo pipefail
@@ -116,6 +133,7 @@ FOUNDRY_APPLIANCE_IP=${FOUNDRY_APPLIANCE_IP_REMOTE}
 FOUNDRY_APPLIANCE_PREFIX=${FOUNDRY_APPLIANCE_PREFIX_REMOTE}
 FOUNDRY_SSH_PUBLIC_KEY=${FOUNDRY_SSH_PUBLIC_KEY_REMOTE}
 FOUNDRY_WAIT_FOR_SSH=${FOUNDRY_WAIT_FOR_SSH_REMOTE}
+FOUNDRY_CONSOLE_PASSWORD=${FOUNDRY_CONSOLE_PASSWORD_REMOTE}
 
 FOUNDRY_DISK="\${FOUNDRY_IMAGE_DIR}/\${FOUNDRY_NAME}.qcow2"
 FOUNDRY_SEED_DIR="\${FOUNDRY_IMAGE_DIR}/\${FOUNDRY_NAME}-seed"
@@ -153,6 +171,14 @@ if [[ -f "\${FOUNDRY_DISK}" ]]; then
     exit 1
 fi
 
+# Hash the operator-provided console password before writing cloud-init data.
+if ! command -v openssl >/dev/null 2>&1; then
+    echo "Missing openssl on the virtualization host." >&2
+    exit 1
+fi
+
+FOUNDRY_CONSOLE_PASSWORD_HASH="\$(printf '%s\n' "\${FOUNDRY_CONSOLE_PASSWORD}" | openssl passwd -6 -stdin)"
+
 #### These steps create the foundry VM disk and cloud-init seed
 
 # Copy the cloud image into an independent foundry disk.
@@ -180,10 +206,21 @@ users:
   - name: \${FOUNDRY_USER}
     groups: wheel
     shell: /bin/bash
+    lock_passwd: false
+    passwd: '\${FOUNDRY_CONSOLE_PASSWORD_HASH}'
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh_authorized_keys:
       - "\${FOUNDRY_SSH_PUBLIC_KEY}"
 disable_root: true
+write_files:
+  - path: /etc/sudoers.d/90-appliance
+    owner: root:root
+    permissions: '0440'
+    content: |
+      \${FOUNDRY_USER} ALL=(ALL) NOPASSWD:ALL
+runcmd:
+  - [ usermod, --password, '\${FOUNDRY_CONSOLE_PASSWORD_HASH}', '\${FOUNDRY_USER}' ]
+  - [ sh, -c, 'if id cloud-user >/dev/null 2>&1; then usermod --password "\$1" cloud-user; fi', foundry-cloud-user-password, '\${FOUNDRY_CONSOLE_PASSWORD_HASH}' ]
 growpart:
   mode: auto
   devices:

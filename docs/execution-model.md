@@ -34,7 +34,8 @@ operator workstation
 | Service enablement commands | Virtualization host | Sent over SSH by `03-enable-host-services.sh`; it also enables the default libvirt image pool. |
 | OVS/libvirt network commands | Virtualization host | Sent over SSH by `04-configure-ovs-networks.sh`. |
 | Foundry VM creation | Virtualization host | Sent over SSH by `06-create-foundry-vm.sh`. |
-| Foundry service commands | Foundry VM | Sent through the virtualization host jump path by `07-configure-foundry-services.sh`. |
+| Foundry console password commands | Foundry VM | Sent through the virtualization host jump path by `07-configure-foundry-console.sh`. |
+| Foundry service commands | Foundry VM | Sent through the virtualization host jump path by `08-configure-foundry-services.sh`. |
 | `/usr/local/sbin/appliance-install-net.sh` | Virtualization host | Generated persistent OVS setup script. |
 | `appliance-install-net.service` | Virtualization host | Generated systemd service that reruns OVS setup at boot. |
 | IdM DNS, `chronyd`, `httpd` | Foundry VM | Configured by script `07` for the appliance network. |
@@ -86,8 +87,9 @@ Run these from the repository root:
 ./scripts/04-configure-ovs-networks.sh
 ./scripts/05-verify-virt-host.sh
 ./scripts/06-create-foundry-vm.sh
-./scripts/07-configure-foundry-services.sh
-./scripts/08-verify-foundry-services.sh
+./scripts/07-configure-foundry-console.sh
+./scripts/08-configure-foundry-services.sh
+./scripts/09-verify-foundry-services.sh
 ```
 
 ## What remote.sh Does

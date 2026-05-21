@@ -33,6 +33,7 @@ APPLIANCE_FOUNDRY_HOSTNAME="${APPLIANCE_FOUNDRY_HOSTNAME:-foundry.${APPLIANCE_CL
 APPLIANCE_FOUNDRY_APPLIANCE_CIDR="${APPLIANCE_FOUNDRY_APPLIANCE_CIDR:-172.16.10.0/24}"
 APPLIANCE_FOUNDRY_ASSETS_DIR="${APPLIANCE_FOUNDRY_ASSETS_DIR:-/srv/appliance/assets}"
 APPLIANCE_FOUNDRY_HTTP_ROOT="${APPLIANCE_FOUNDRY_HTTP_ROOT:-/srv/appliance}"
+APPLIANCE_FOUNDRY_CONSOLE_PASSWORD="${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD:-}"
 APPLIANCE_BUILDER_IMAGE="${APPLIANCE_BUILDER_IMAGE:-catalog.redhat.com/software/containers/assisted/agentpreinstall-image-builder-rhel9/65a55174031d94dbea7f2e00}"
 
 #### These steps validate foundry service settings before making changes
@@ -44,6 +45,7 @@ validate_fqdn "APPLIANCE_CLUSTER_DOMAIN" "${APPLIANCE_CLUSTER_DOMAIN}"
 validate_fqdn "APPLIANCE_IDM_REALM" "${APPLIANCE_IDM_REALM}"
 validate_non_empty "APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD" "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
 validate_non_empty "APPLIANCE_IDM_ADMIN_PASSWORD" "${APPLIANCE_IDM_ADMIN_PASSWORD}"
+validate_linux_user "APPLIANCE_FOUNDRY_USER" "${APPLIANCE_FOUNDRY_USER}"
 validate_dns_label "APPLIANCE_MIRROR_REGISTRY_NAME" "${APPLIANCE_MIRROR_REGISTRY_NAME}"
 validate_fqdn "APPLIANCE_FOUNDRY_HOSTNAME" "${APPLIANCE_FOUNDRY_HOSTNAME}"
 validate_ipv4 "APPLIANCE_FOUNDRY_APPLIANCE_IP" "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
@@ -76,6 +78,18 @@ if [[ "${APPLIANCE_IDM_ADMIN_PASSWORD}" == replace-with-* ]]; then
     fail "APPLIANCE_IDM_ADMIN_PASSWORD must be changed in config/foundry.env."
 fi
 
+if [[ -z "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" ]]; then
+    fail "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be set in config/foundry.env."
+fi
+
+if [[ "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" == replace-with-* ]]; then
+    fail "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be changed in config/foundry.env."
+fi
+
+if [[ "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}" == *$'\n'* ]]; then
+    fail "APPLIANCE_FOUNDRY_CONSOLE_PASSWORD must be a single-line value."
+fi
+
 if [[ -n "${RHSM_BASEOS_REPO:-}" ]]; then
     validate_simple_name "RHSM_BASEOS_REPO" "${RHSM_BASEOS_REPO}"
 fi
@@ -97,8 +111,10 @@ printf -v IDM_REALM_REMOTE '%q' "${APPLIANCE_IDM_REALM}"
 printf -v IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_DIRECTORY_MANAGER_PASSWORD}"
 printf -v IDM_ADMIN_PASSWORD_REMOTE '%q' "${APPLIANCE_IDM_ADMIN_PASSWORD}"
 printf -v FOUNDRY_HOSTNAME_REMOTE '%q' "${APPLIANCE_FOUNDRY_HOSTNAME}"
+printf -v FOUNDRY_USER_REMOTE '%q' "${APPLIANCE_FOUNDRY_USER}"
 printf -v FOUNDRY_IP_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_IP}"
 printf -v FOUNDRY_CIDR_REMOTE '%q' "${APPLIANCE_FOUNDRY_APPLIANCE_CIDR}"
+printf -v FOUNDRY_CONSOLE_PASSWORD_REMOTE '%q' "${APPLIANCE_FOUNDRY_CONSOLE_PASSWORD}"
 printf -v CLUSTER_DOMAIN_REMOTE '%q' "${APPLIANCE_CLUSTER_DOMAIN}"
 printf -v MIRROR_REGISTRY_NAME_REMOTE '%q' "${APPLIANCE_MIRROR_REGISTRY_NAME}"
 printf -v API_IP_REMOTE '%q' "${APPLIANCE_API_IP}"
@@ -125,8 +141,10 @@ IDM_REALM=${IDM_REALM_REMOTE}
 IDM_DIRECTORY_MANAGER_PASSWORD=${IDM_DIRECTORY_MANAGER_PASSWORD_REMOTE}
 IDM_ADMIN_PASSWORD=${IDM_ADMIN_PASSWORD_REMOTE}
 FOUNDRY_HOSTNAME=${FOUNDRY_HOSTNAME_REMOTE}
+FOUNDRY_USER=${FOUNDRY_USER_REMOTE}
 FOUNDRY_IP=${FOUNDRY_IP_REMOTE}
 FOUNDRY_CIDR=${FOUNDRY_CIDR_REMOTE}
+FOUNDRY_CONSOLE_PASSWORD=${FOUNDRY_CONSOLE_PASSWORD_REMOTE}
 CLUSTER_DOMAIN=${CLUSTER_DOMAIN_REMOTE}
 MIRROR_REGISTRY_NAME=${MIRROR_REGISTRY_NAME_REMOTE}
 API_IP=${API_IP_REMOTE}
@@ -140,6 +158,37 @@ NODE_3_IP=${NODE_3_IP_REMOTE}
 ASSETS_DIR=${ASSETS_DIR_REMOTE}
 HTTP_ROOT=${HTTP_ROOT_REMOTE}
 BUILDER_IMAGE=${BUILDER_IMAGE_REMOTE}
+
+#### These steps enable foundry graphical console login
+
+# Convert the readable config password to a local SHA-512 password hash.
+if ! command -v openssl >/dev/null 2>&1; then
+    echo "Missing openssl on foundry." >&2
+    exit 1
+fi
+
+FOUNDRY_CONSOLE_PASSWORD_HASH="\$(printf '%s\n' "\${FOUNDRY_CONSOLE_PASSWORD}" | openssl passwd -6 -stdin)"
+
+# Set the console password on both local accounts used by the RHEL cloud image.
+if ! id "\${FOUNDRY_USER}" >/dev/null 2>&1; then
+    echo "Missing foundry user: \${FOUNDRY_USER}" >&2
+    exit 1
+fi
+
+usermod --password "\${FOUNDRY_CONSOLE_PASSWORD_HASH}" "\${FOUNDRY_USER}"
+
+if id cloud-user >/dev/null 2>&1; then
+    usermod --password "\${FOUNDRY_CONSOLE_PASSWORD_HASH}" cloud-user
+else
+    echo "cloud-user does not exist on this image; skipping cloud-user password."
+fi
+
+# Keep the appliance account passwordless for sudo.
+cat > /etc/sudoers.d/90-appliance <<SUDOERS
+\${FOUNDRY_USER} ALL=(ALL) NOPASSWD:ALL
+SUDOERS
+chmod 0440 /etc/sudoers.d/90-appliance
+visudo -cf /etc/sudoers.d/90-appliance >/dev/null
 
 #### These steps register foundry and install service packages
 

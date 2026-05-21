@@ -23,8 +23,9 @@ appliance-install/
     04-configure-ovs-networks.sh
     05-verify-virt-host.sh
     06-create-foundry-vm.sh
-    07-configure-foundry-services.sh
-    08-verify-foundry-services.sh
+    07-configure-foundry-console.sh
+    08-configure-foundry-services.sh
+    09-verify-foundry-services.sh
     README.md
     lib/
       remote.sh
