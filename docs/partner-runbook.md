@@ -1209,6 +1209,8 @@ This script loads `config/host.env`, `config/network.env`,
 sizes, cluster DNS identity, node MAC addresses, pull secret file, core SSH
 public key, operator package list, and additional image refs before making
 changes.
+The pull secret must be valid JSON, must contain a non-empty `auths` object, and
+must not contain placeholder `replace-with-*` auth values.
 
 Then it copies the configured local pull secret to foundry-local secret
 locations and writes generated OpenShift appliance input files on foundry:
@@ -1251,6 +1253,8 @@ Troubleshooting checkpoints:
 - `APPLIANCE_CORE_PASSWORD` must be changed from the placeholder.
 - The configured pull secret file and core public key file must exist on the
   operator workstation.
+- The configured pull secret file must be valid JSON and must not contain
+  placeholder registry auth values.
 - Each OpenShift node disk must be at least as large as
   `APPLIANCE_IMAGE_DISK_SIZE_GB`.
 - Operator package entries must use `package|channel` or

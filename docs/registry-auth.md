@@ -33,6 +33,10 @@ absolute path:
 APPLIANCE_PULL_SECRET_FILE="/absolute/path/to/appliance-install/config/pull-secret.multi-registry.json"
 ```
 
+Script `10` validates this file before copying it to foundry. It must be valid
+JSON, contain a non-empty `auths` object, and have all `replace-with-*`
+placeholder auth values replaced.
+
 ## Registry Types
 
 | Registry content | Where the image refs go | Pull secret auth key |

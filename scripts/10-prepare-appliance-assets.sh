@@ -101,9 +101,62 @@ if [[ ! -f "${APPLIANCE_PULL_SECRET_FILE}" ]]; then
     fail "Missing APPLIANCE_PULL_SECRET_FILE: ${APPLIANCE_PULL_SECRET_FILE}"
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+    fail "python3 must be installed on the operator workstation to validate the pull secret."
+fi
+
 if [[ ! -f "${APPLIANCE_CORE_SSH_PUBLIC_KEY_FILE}" ]]; then
     fail "Missing APPLIANCE_CORE_SSH_PUBLIC_KEY_FILE: ${APPLIANCE_CORE_SSH_PUBLIC_KEY_FILE}"
 fi
+
+#### These steps validate local-only secret files before copying them
+
+# The pull secret must be valid JSON before foundry uses it for registry auth.
+python3 - "${APPLIANCE_PULL_SECRET_FILE}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+
+try:
+    payload = json.loads(path.read_text())
+except Exception as exc:
+    print(f"{path} is not valid JSON: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+auths = payload.get("auths")
+if not isinstance(auths, dict) or not auths:
+    print(f"{path} must contain a non-empty auths object.", file=sys.stderr)
+    sys.exit(1)
+
+for registry, entry in auths.items():
+    if not isinstance(registry, str) or not registry:
+        print(f"{path} contains an empty registry key.", file=sys.stderr)
+        sys.exit(1)
+
+    if not isinstance(entry, dict):
+        print(f"{path} auth entry for {registry} must be an object.", file=sys.stderr)
+        sys.exit(1)
+
+    auth = entry.get("auth")
+    username = entry.get("username")
+    password = entry.get("password")
+    identitytoken = entry.get("identitytoken")
+
+    values = [auth, username, password, identitytoken]
+    if any(isinstance(value, str) and value.startswith("replace-with-") for value in values):
+        print(f"{path} auth entry for {registry} still contains a placeholder.", file=sys.stderr)
+        sys.exit(1)
+
+    has_auth = isinstance(auth, str) and bool(auth)
+    has_user_password = isinstance(username, str) and bool(username) and isinstance(password, str) and bool(password)
+    has_token = isinstance(identitytoken, str) and bool(identitytoken)
+
+    if not (has_auth or has_user_password or has_token):
+        print(f"{path} auth entry for {registry} must include auth, username/password, or identitytoken.", file=sys.stderr)
+        sys.exit(1)
+PY
 
 APPLIANCE_CORE_SSH_PUBLIC_KEY="$(<"${APPLIANCE_CORE_SSH_PUBLIC_KEY_FILE}")"
 validate_ssh_public_key "APPLIANCE_CORE_SSH_PUBLIC_KEY" "${APPLIANCE_CORE_SSH_PUBLIC_KEY}"

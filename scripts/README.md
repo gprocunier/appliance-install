@@ -92,6 +92,8 @@ pull secret file referenced by `APPLIANCE_PULL_SECRET_FILE`. Large image lists
 can live in ignored `config/*.images` files referenced by
 `APPLIANCE_ADDITIONAL_IMAGES_FILE`. See `docs/registry-auth.md` for copyable
 examples that combine Red Hat, IBM, Quay, and generic private registry auth.
+Script `10` validates the pull secret JSON and fails if placeholder auth values
+are still present.
 
 The latest live verification succeeded with all three nodes `Ready`,
 ClusterVersion `4.21.15` reporting `Available=True` and `Progressing=False`, no
