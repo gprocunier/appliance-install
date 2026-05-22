@@ -32,6 +32,7 @@ const basePath = document.body?.dataset.base || "";
 const currentPage = document.body?.dataset.page || "home";
 const SHIKI_CDN_URL = "https://esm.sh/shiki@4.0.2";
 const SHIKI_THEME = "github-dark";
+const REPO_ARTIFACT_BASE_URL = "https://github.com/gprocunier/appliance-install/blob/main/";
 const CODEBOX_DEFAULT_LANGUAGE = "bash";
 const CODEBOX_SUPPORTED_LANGUAGES = [
   "bash",
@@ -53,10 +54,110 @@ const CODEBOX_LANGUAGE_LABELS = {
   text: "Text",
   yaml: "YAML"
 };
+const REPO_ARTIFACT_PATHS = new Set([
+  ".github/workflows/pages.yml",
+  ".gitignore",
+  "README.md",
+  "config/additional-images.env.example",
+  "config/additional-images.ibm-cloudpak.env.example",
+  "config/appliance.env.example",
+  "config/cloudpak.images.example",
+  "config/foundry-standalone.env.example",
+  "config/foundry.env.example",
+  "config/host.env.example",
+  "config/network.env.example",
+  "config/operators.env.example",
+  "config/operators.ibm-cloudpak.env.example",
+  "config/pull-secret.multi-registry.json.example",
+  "config/rhsm.env.example",
+  "docs/execution-model.md",
+  "docs/folder-tree.md",
+  "docs/foundry-standalone.md",
+  "docs/foundry.md",
+  "docs/network-design.md",
+  "docs/partner-runbook.md",
+  "docs/registry-auth.md",
+  "scripts/01-register-rhn.sh",
+  "scripts/02-install-host-packages.sh",
+  "scripts/03-enable-host-services.sh",
+  "scripts/04-configure-ovs-networks.sh",
+  "scripts/05-verify-virt-host.sh",
+  "scripts/06-create-foundry-vm.sh",
+  "scripts/07-configure-foundry-console.sh",
+  "scripts/08-configure-foundry-services.sh",
+  "scripts/09-verify-foundry-services.sh",
+  "scripts/10-prepare-appliance-assets.sh",
+  "scripts/11-build-appliance-image.sh",
+  "scripts/12-create-cluster-config-image.sh",
+  "scripts/13-create-ocp-vms.sh",
+  "scripts/14-destroy-ocp-vms.sh",
+  "scripts/15-watch-ocp-install.sh",
+  "scripts/16-verify-ocp-cluster.sh",
+  "scripts/README.md",
+  "scripts/foundry-standalone/01-register-rhn.sh",
+  "scripts/foundry-standalone/02-install-packages.sh",
+  "scripts/foundry-standalone/03-verify-host.sh",
+  "scripts/foundry-standalone/04-prepare-appliance-assets.sh",
+  "scripts/foundry-standalone/05-build-appliance-image.sh",
+  "scripts/foundry-standalone/06-fetch-appliance-image.sh",
+  "scripts/foundry-standalone/README.md",
+  "scripts/foundry-standalone/lib/standalone.sh",
+  "scripts/lib/remote.sh"
+]);
 
 let shikiHighlighterPromise;
 
 const withBase = (path) => `${basePath}${path}`;
+
+const repoArtifactUrl = (path) => `${REPO_ARTIFACT_BASE_URL}${path
+  .split("/")
+  .map((part) => encodeURIComponent(part))
+  .join("/")}`;
+
+const repoArtifactPathForCode = (code) => {
+  const value = code.textContent.trim().replace(/^\.\//, "");
+
+  if (REPO_ARTIFACT_PATHS.has(value)) {
+    return value;
+  }
+
+  if (!/^[0-9]{2}-[a-z0-9-]+\.sh$/.test(value)) {
+    return null;
+  }
+
+  if (code.closest("#standalone-scripts")) {
+    const standalonePath = `scripts/foundry-standalone/${value}`;
+    return REPO_ARTIFACT_PATHS.has(standalonePath) ? standalonePath : null;
+  }
+
+  const scriptPath = `scripts/${value}`;
+  if (REPO_ARTIFACT_PATHS.has(scriptPath)) {
+    return scriptPath;
+  }
+
+  const standalonePath = `scripts/foundry-standalone/${value}`;
+  return REPO_ARTIFACT_PATHS.has(standalonePath) ? standalonePath : null;
+};
+
+const installRepoArtifactLinks = () => {
+  document.querySelectorAll(".markdown-body code").forEach((code) => {
+    if (code.closest("pre, a")) {
+      return;
+    }
+
+    const artifactPath = repoArtifactPathForCode(code);
+    if (!artifactPath) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.className = "artifact-link";
+    link.href = repoArtifactUrl(artifactPath);
+    link.setAttribute("aria-label", `${code.textContent.trim()} in GitHub`);
+    code.replaceWith(link);
+    link.appendChild(code);
+  });
+};
 
 const normalizeCodeLanguage = (language) => {
   const raw = String(language || "").toLowerCase().trim();
@@ -274,4 +375,5 @@ const installCodeboxes = () => {
 };
 
 renderDocsNav();
+installRepoArtifactLinks();
 installCodeboxes();
