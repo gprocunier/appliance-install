@@ -76,7 +76,15 @@ a:focus {
   text-transform: uppercase;
 }
 
-.site-title {
+.site-brand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.site-brand__title {
   margin: 0;
   font-family: "Red Hat Display", "Red Hat Text", Arial, sans-serif;
   font-size: 2.8rem;
@@ -84,26 +92,32 @@ a:focus {
   letter-spacing: 0;
 }
 
-.site-title a {
+.site-brand__title a {
   color: inherit;
   text-decoration: none;
 }
 
-.site-tagline {
+.site-brand__title a:hover,
+.site-brand__title a:focus {
+  color: var(--ai-red-dark);
+}
+
+.site-brand__tagline {
   max-width: 72rem;
   margin: 0.45rem 0 0;
   color: var(--ai-gray-80);
   font-size: 1.05rem;
 }
 
-.site-actions {
+.site-header__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.45rem;
   margin-top: 0.9rem;
 }
 
-.site-actions a,
+.site-header__actions a,
+.site-header__actions kbd,
 .action-link {
   display: inline-flex;
   align-items: center;
@@ -117,8 +131,18 @@ a:focus {
   text-decoration: none;
 }
 
-.site-actions a:hover,
-.site-actions a:focus,
+.site-header__actions a {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.site-header__actions kbd {
+  font-family: "Red Hat Text", Arial, sans-serif;
+}
+
+.site-header__actions a:hover kbd,
+.site-header__actions a:focus kbd,
 .action-link:hover,
 .action-link:focus {
   color: #ffffff;
@@ -585,7 +609,7 @@ a:focus {
     padding-left: 1rem;
   }
 
-  .site-title {
+  .site-brand__title {
     font-size: 2.1rem;
   }
 
