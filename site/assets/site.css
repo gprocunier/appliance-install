@@ -349,8 +349,7 @@ a:focus {
 }
 
 .markdown-body .codebox pre.shiki .line {
-  display: block;
-  min-height: 1.45em;
+  min-height: 1em;
 }
 
 .markdown-body .codebox pre.shiki .line:empty::before {
