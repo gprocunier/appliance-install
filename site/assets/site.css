@@ -200,7 +200,6 @@ a:focus {
 }
 
 .markdown-body pre {
-  position: relative;
   max-width: none;
   margin: 1rem 0 1.5rem;
   padding: 1rem;
@@ -219,33 +218,6 @@ a:focus {
   font-size: 0.92rem;
   line-height: 1.45;
   white-space: pre;
-}
-
-.copy-button {
-  position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
-  min-height: 2rem;
-  padding: 0.25rem 0.55rem;
-  color: #c9d1d9;
-  border: 1px solid #3d444d;
-  background: #161b22;
-  cursor: pointer;
-  font-family: "Red Hat Text", Arial, sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.copy-button:hover,
-.copy-button:focus {
-  color: #ffffff;
-  border-color: #8b949e;
-  background: #21262d;
-}
-
-.copy-button[data-copy-state="copied"] {
-  color: #3fb950;
-  border-color: #238636;
 }
 
 .markdown-body table {
@@ -274,9 +246,122 @@ a:focus {
 .context-block,
 .route-card,
 .diagram-panel,
-.flow-step {
+.flow-step,
+.codebox {
   border: 1px solid var(--ai-gray-20);
   background: #ffffff;
+}
+
+.codebox {
+  max-width: none;
+  margin: 1rem 0 1.5rem;
+  overflow: hidden;
+  border-color: #30363d;
+  background: #0d1117;
+  box-shadow: 0 12px 34px rgba(13, 17, 23, 0.16);
+}
+
+.codebox__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #30363d;
+  background: #161b22;
+}
+
+.codebox__language {
+  color: #8b949e;
+  font-family: "Red Hat Mono", Consolas, monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.codebox__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.codebox__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.85rem;
+  padding: 0.25rem 0.55rem;
+  color: #c9d1d9;
+  border: 1px solid #3d444d;
+  background: #0d1117;
+  cursor: pointer;
+  font-family: "Red Hat Text", Arial, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.codebox__button:hover,
+.codebox__button:focus {
+  color: #ffffff;
+  border-color: #8b949e;
+  background: #21262d;
+}
+
+.codebox__button[aria-pressed="true"] {
+  color: #79c0ff;
+  border-color: #58a6ff;
+  background: rgba(56, 139, 253, 0.16);
+}
+
+.codebox__button[data-copy-state="copied"] {
+  color: #3fb950;
+  border-color: #238636;
+}
+
+.codebox__button[data-copy-state="failed"] {
+  color: #ff7b72;
+  border-color: #da3633;
+}
+
+.markdown-body .codebox pre,
+.markdown-body .codebox pre.shiki,
+.markdown-body .codebox pre.codebox__plain {
+  margin: 0;
+  padding: 1rem 1.1rem 1.1rem;
+  overflow: auto;
+  border: 0;
+  background: #0d1117;
+}
+
+.markdown-body .codebox pre code,
+.markdown-body .codebox pre.shiki code,
+.markdown-body .codebox pre.codebox__plain code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: "Red Hat Mono", Consolas, monospace;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.markdown-body .codebox pre.shiki .line {
+  display: block;
+  min-height: 1.45em;
+}
+
+.markdown-body .codebox pre.shiki .line:empty::before {
+  content: " ";
+}
+
+.markdown-body .codebox--wrapped pre code,
+.markdown-body .codebox--wrapped pre.shiki code,
+.markdown-body .codebox--wrapped pre.codebox__plain code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .docs-map,
