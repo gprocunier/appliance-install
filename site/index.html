@@ -3,8 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Appliance Install | OpenShift appliance lab</title>
-    <meta name="description" content="Diátaxis documentation for building, reimaging, and explaining a three-node OpenShift appliance lab.">
+    <title>Appliance Install | OpenShift Appliance Lab</title>
+    <meta name="description" content="Build, reimage, and reset a disconnected three-node OpenShift appliance lab from readable shell scripts.">
+    <meta property="og:title" content="Appliance Install">
+    <meta property="og:description" content="Build, reimage, and reset a disconnected three-node OpenShift appliance lab from readable shell scripts.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://gprocunier.github.io/appliance-install/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Appliance Install">
+    <meta name="twitter:description" content="Build, reimage, and reset a disconnected three-node OpenShift appliance lab from readable shell scripts.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&amp;family=Red+Hat+Mono:wght@400;500&amp;family=Red+Hat+Text:wght@400;500;700&amp;display=swap" rel="stylesheet">
@@ -17,7 +24,7 @@
       <div class="site-header__inner">
         <p class="eyebrow">OpenShift Appliance Lab</p>
         <h1 class="site-title"><a href="index.html">Appliance Install</a></h1>
-        <p class="site-tagline">Readable scripts and partner-facing documentation for building a disconnected three-node OpenShift appliance demo.</p>
+        <p class="site-tagline">Build a disconnected three-node OpenShift appliance demo with readable shell scripts.</p>
         <nav class="site-actions" aria-label="Project links">
           <a href="https://github.com/gprocunier/appliance-install">GitHub Repo</a>
           <a href="tutorials/full-lab.html">First Run</a>
@@ -37,11 +44,11 @@
       </aside>
 
       <article class="content-column markdown-body">
-        <p class="lead">This site is organized with Diátaxis: tutorials teach a first path, how-to guides solve focused jobs, reference pages give exact facts, and explanation pages describe why the lab is built this way.</p>
+        <p class="lead">Use these pages to prepare the host, build the appliance image, boot the OpenShift VMs, reset the demo, and adjust mirrored content without exposing local secrets.</p>
 
         <section id="start">
           <h2>Start Here</h2>
-          <p>Pick the page by the job you need the documentation to do.</p>
+          <p>Choose the task you are doing.</p>
           <table>
             <thead>
               <tr><th>I need...</th><th>Start with</th><th>What I will know</th></tr>
@@ -55,28 +62,6 @@
               <tr><td>To understand the topology</td><td><a href="explanation/architecture.html">Architecture</a></td><td>Why foundry, OVS, IdM DNS/NTP, and the image-build flow are separated.</td></tr>
             </tbody>
           </table>
-        </section>
-
-        <section id="routes">
-          <h2>Documentation Modes</h2>
-          <div class="route-grid">
-            <article class="route-card">
-              <h3>Tutorials</h3>
-              <p>Follow a known path from a clean starting point. Use these when you are learning or rehearsing the workshop.</p>
-            </article>
-            <article class="route-card">
-              <h3>How-To Guides</h3>
-              <p>Perform one task after the environment exists: reimage nodes, change mirrored content, or rebuild image inputs.</p>
-            </article>
-            <article class="route-card">
-              <h3>Reference</h3>
-              <p>Look up exact script roles, config files, defaults, and artifacts without extra narrative.</p>
-            </article>
-            <article class="route-card">
-              <h3>Explanation</h3>
-              <p>Understand the architecture decisions: disconnected networking, foundry responsibilities, and image handoff.</p>
-            </article>
-          </div>
         </section>
 
         <section id="topology">
@@ -95,7 +80,7 @@
     </main>
 
     <footer class="site-footer">
-      <span>Appliance Install documentation. Keep tracked content publishable and local secrets ignored.</span>
+      <span>Keep real credentials, pull secrets, kubeconfigs, and private hostnames in ignored local files.</span>
     </footer>
   </body>
 </html>

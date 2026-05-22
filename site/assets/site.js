@@ -41,10 +41,10 @@ const renderDocsNav = () => {
 
   const nav = document.createElement("nav");
   nav.className = "docs-map";
-  nav.setAttribute("aria-label", "Documentation");
+  nav.setAttribute("aria-label", "Pages");
 
   const heading = document.createElement("h2");
-  heading.textContent = "Documentation";
+  heading.textContent = "Pages";
   nav.appendChild(heading);
 
   const homeList = document.createElement("ul");

@@ -219,7 +219,7 @@ See [Standalone Foundry](docs/foundry-standalone.md) for that build-only path.
 | `config/additional-images.ibm-cloudpak.env.example` | Example IBM Cloud Pak non-operator image additions. |
 | `config/cloudpak.images.example` | Example one-image-per-line list for larger IBM content sets. |
 | `docs/` | Public operator notes and partner runbooks. |
-| `site/` | GitHub Pages site organized with Diátaxis tutorials, how-to guides, reference, and explanation pages. |
+| `site/` | GitHub Pages static site for first-run, reimage, mirrored-content, reference, and architecture guidance. |
 | `.github/workflows/pages.yml` | Deploys the static `site/` directory to GitHub Pages. |
 | `scripts/01-*.sh` through `scripts/09-*.sh` | Virtualization host and foundry preparation. |
 | `scripts/10-*.sh` through `scripts/16-*.sh` | OpenShift appliance asset build, VM creation, reimage, install watch, and cluster verification. |
